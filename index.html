@@ -326,14 +326,14 @@ function errText(e){
     case "approval_required": case "consent_required": return "Trang cần bạn cho phép dùng kết nối “Đăng bài My Auris”. Bấm Tải lại và chọn Cho phép.";
     case "not_in_manifest": return "Bạn đã tắt quyền dùng “Đăng bài My Auris” cho trang này. Bật lại trong cài đặt của trang, rồi bấm Tải lại.";
     case "blocked_by_policy": return "Quản trị tổ chức đang chặn công cụ này với tài khoản của bạn.";
-    case "no_api": return e.message;
+    case "no_api": case "no_server": return e.message;
     case "auth": return "Cần nhập lại mã chung của team.";
     case "server_unavailable": return "Hệ thống đăng bài đang bận (có thể đang xử lý video lớn). Thử lại sau 1–2 phút.";
     case "tool_error": case "app_error": return e.message || "Hệ thống báo lỗi.";
     default: return (e && e.message) ? e.message : "Có lỗi khi gọi hệ thống đăng bài.";
   }
 }
-const pageLevel = c => ["no_api","auth","needs_reauth","server_not_connected","selection_required","approval_required","consent_required","not_in_manifest","blocked_by_policy","not_granted","capability_disabled"].includes(c);
+const pageLevel = c => ["no_server","no_api","auth","needs_reauth","server_not_connected","selection_required","approval_required","consent_required","not_in_manifest","blocked_by_policy","not_granted","capability_disabled"].includes(c);
 
 function unwrap(p){
   if (typeof p === "string"){ try { p = JSON.parse(p); } catch(_){ } }
@@ -351,7 +351,7 @@ async function call(tool, input){
   try {
     r = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({action:tool, input: input || {}, token: getToken(), nguoi: getName()})});
-  } catch(_){ const e = new Error("Không kết nối được máy chủ n8n. Kiểm tra mạng, hoặc nhờ anh Duy kiểm tra API."); e.code = "server_unavailable"; throw e; }
+  } catch(_){ const e = new Error("Chưa kết nối được API trên n8n.myauris.vn. Nếu anh Duy chưa bật workflow dang-bai-api (hoặc chưa cho phép địa chỉ web này ở mục CORS), web chưa có dữ liệu. Nếu đã bật, kiểm tra lại mạng."); e.code = "no_server"; throw e; }
   if (r.status === 401 || r.status === 403){ setToken(""); showLogin("Mã chung không đúng (có thể vừa được đổi). Hỏi lại người quản lý."); const e = new Error("Cần đăng nhập lại."); e.code = "auth"; throw e; }
   let p; try { p = await r.json(); } catch(_){ p = null; }
   if (!r.ok){ const e = new Error((p && (p.loi || p.message)) || ("Máy chủ báo lỗi " + r.status + ".")); e.code = r.status >= 500 ? "server_unavailable" : "app_error"; throw e; }
