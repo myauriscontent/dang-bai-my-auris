@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đăng bài My Auris</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Lexend:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Layout: bảng điều khiển một cột — thanh tuyến + tab ở trên, lưới thẻ bài, thanh hành động dính đáy khi đã chọn bài */
+  --bg:#f5f4f9; --surface:#ffffff; --ink:#1e1b2b; --muted:#696480; --line:#e2dfeb;
+  --accent:#5a2a9c; --accent-ink:#ffffff; --accent-soft:#efe8fa;
+  --ok:#1d7f55; --ok-soft:#e2f3ea; --warn:#9a600c; --warn-soft:#fbefd9; --bad:#b4361a; --bad-soft:#fbe5df;
+  --t-bacsi:#2563a8; --t-nhakhoa:#0f7c74; --t-vietkieu:#a33a7a;
+  --f-display:"Lexend","Be Vietnam Pro",system-ui,sans-serif;
+  --f-body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14121b; --surface:#1d1a27; --ink:#ece9f5; --muted:#a29db6; --line:#322e41;
+    --accent:#b48ef2; --accent-ink:#1a1326; --accent-soft:#2b2240;
+    --ok:#5cc996; --ok-soft:#173026; --warn:#e5b45e; --warn-soft:#372b15; --bad:#f08a6e; --bad-soft:#3b1f17;
+    --t-bacsi:#7fb2ec; --t-nhakhoa:#5fd0c4; --t-vietkieu:#e98cc4;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14121b; --surface:#1d1a27; --ink:#ece9f5; --muted:#a29db6; --line:#322e41;
+  --accent:#b48ef2; --accent-ink:#1a1326; --accent-soft:#2b2240;
+  --ok:#5cc996; --ok-soft:#173026; --warn:#e5b45e; --warn-soft:#372b15; --bad:#f08a6e; --bad-soft:#3b1f17;
+  --t-bacsi:#7fb2ec; --t-nhakhoa:#5fd0c4; --t-vietkieu:#e98cc4;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding-bottom:96px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* Header */
+header{background:var(--surface);border-bottom:1px solid var(--line)}
+.head{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;padding:16px 0}
+.brand{display:flex;align-items:center;gap:12px}
+.brand h1{font-size:20px;font-weight:600}
+.brand small{display:block;color:var(--muted);font-size:13px}
+.head-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.pill.live{background:var(--bad-soft);color:var(--bad)}
+.pill.test{background:var(--warn-soft);color:var(--warn)}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.stamp{color:var(--muted);font-size:12.5px}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);padding:7px 13px;border-radius:8px;cursor:pointer;font-weight:500;font-size:14px;text-decoration:none;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn.small{padding:4px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.menu{position:relative}
+.menu-list{position:absolute;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 10px 30px rgba(20,10,40,.14);padding:6px;min-width:260px;z-index:30;display:none}
+.menu.open .menu-list{display:grid}
+.menu-list a{display:block;padding:8px 10px;border-radius:6px;text-decoration:none;color:var(--ink);font-size:14px}
+.menu-list a:hover{background:var(--accent-soft)}
+.menu-list a small{display:block;color:var(--muted);font-size:12px}
+
+/* Summary */
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:16px 0 4px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}
+.stat b{display:block;font-family:var(--f-display);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:13px}
+.stat.alert b{color:var(--bad)}
+
+/* Filters + tabs */
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;padding:14px 0 10px}
+.chips,.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13.5px;display:inline-flex;gap:6px;align-items:center}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.chip .n{font-variant-numeric:tabular-nums;opacity:.75}
+.tab{border:0;background:none;padding:8px 4px;margin-right:14px;cursor:pointer;font-weight:500;color:var(--muted);border-bottom:2px solid transparent}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.tab .n{font-variant-numeric:tabular-nums;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:0 7px;font-size:12px;margin-left:4px}
+.tab .n.bad{background:var(--bad-soft);color:var(--bad)}
+.tabsrow{border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+
+/* Notices */
+.notice{border-radius:var(--r);padding:12px 14px;margin:14px 0;font-size:14px;border:1px solid var(--line);background:var(--surface)}
+.notice.bad{background:var(--bad-soft);border-color:transparent;color:var(--ink)}
+.notice.warn{background:var(--warn-soft);border-color:transparent}
+.notice b{font-weight:600}
+.empty{color:var(--muted);padding:40px 0;text-align:center}
+
+/* Cards */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin:14px 0 10px;font-size:14px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:8px;position:relative}
+.card.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.card-top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pick{display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-right:4px}
+.pick input{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+.tag{font-size:12px;padding:2px 8px;border-radius:6px;background:var(--bg);color:var(--muted);font-weight:500}
+.tag.t-bacsi{color:var(--t-bacsi);background:color-mix(in srgb,var(--t-bacsi) 12%,transparent)}
+.tag.t-nhakhoa{color:var(--t-nhakhoa);background:color-mix(in srgb,var(--t-nhakhoa) 12%,transparent)}
+.tag.t-vietkieu{color:var(--t-vietkieu);background:color-mix(in srgb,var(--t-vietkieu) 12%,transparent)}
+.card h3{font-size:15.5px;font-weight:600;line-height:1.35}
+.file{font-size:12.5px;color:var(--muted);margin:0;word-break:break-word}
+.cap{margin:0;font-size:13.5px;color:var(--ink);opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.dest{font-size:12.5px;color:var(--muted);margin:0}
+.dest b{color:var(--ink);font-weight:500}
+.card-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:4px}
+
+/* Rows (lịch, xử lý, đã đăng) */
+.rows{display:grid;gap:8px;margin-top:14px}
+.row{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:6px 16px;align-items:center}
+.when{font-variant-numeric:tabular-nums}
+.when b{display:block;font-family:var(--f-display);font-size:17px;font-weight:600}
+.when span{color:var(--muted);font-size:13px}
+.row .main h3{font-size:14.5px;font-weight:600}
+.row .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;font-size:13px;color:var(--muted)}
+.row .acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.row .edit{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:6px;border-top:1px dashed var(--line)}
+.status{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--muted)}
+.status.ok{background:var(--ok-soft);color:var(--ok)}
+.status.wait{background:var(--accent-soft);color:var(--accent)}
+.status.warn{background:var(--warn-soft);color:var(--warn)}
+.status.bad{background:var(--bad-soft);color:var(--bad)}
+.reason{grid-column:1/-1;font-size:13px;color:var(--bad);margin:0}
+
+input[type=date],input[type=time],input[type=number],select,textarea,input[type=text]{border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:6px 8px}
+textarea{width:100%;resize:vertical;line-height:1.5}
+
+/* Sticky action bar */
+.actionbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(20,10,40,.08);transform:translateY(110%);transition:transform .18s ease;z-index:20}
+.actionbar.show{transform:none}
+.actionbar .wrap{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding-top:12px;padding-bottom:12px}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(15,10,25,.45);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50}
+.overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:14px;width:min(980px,100%);box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column}
+.modal.narrow{width:min(520px,100%)}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center}
+.modal-head h2{font-size:18px;font-weight:600}
+.modal-body{padding:16px 20px;display:grid;gap:14px}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
+.x{border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--muted);padding:4px 8px}
+.plan{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;background:var(--bg);border-radius:var(--r);padding:12px 14px}
+.field{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:6px 12px;cursor:pointer;font-size:13.5px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.sched{overflow-x:auto}
+.sched table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:720px}
+.sched th{text-align:left;font-weight:500;color:var(--muted);font-size:12.5px;padding:6px 8px;border-bottom:1px solid var(--line)}
+.sched td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.sched td.t{max-width:260px}
+.sched td.t b{display:block;font-weight:600}
+.sched td.t small{color:var(--muted)}
+.chtog{display:flex;flex-wrap:wrap;gap:4px}
+.chtog button{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer;color:var(--muted)}
+.chtog button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.res{font-size:12.5px;margin-top:4px}
+.res.ok{color:var(--ok)} .res.bad{color:var(--bad)} .res.wait{color:var(--muted)}
+.caplink{font-size:13px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;z-index:60;display:none;max-width:90vw}
+.toast.show{display:block}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.actionbar{transition:none}}
+@media (max-width:700px){
+  .summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row{grid-template-columns:minmax(0,1fr)}
+  .row .acts{justify-content:flex-start}
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .wrap{padding:0 16px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap head">
+    <div class="brand">
+      <div>
+        <h1>Đăng bài My Auris</h1>
+        <small>Tải bài lên Drive → AI viết caption → chọn kênh, ngày giờ → hệ thống tự đăng</small>
+      </div>
+      <span id="mode" class="pill" hidden><span class="dot"></span><span></span></span>
+    </div>
+    <div class="head-actions">
+      <span class="stamp" id="stamp"></span>
+      <button class="btn" id="reload" type="button">Tải lại</button>
+      <button class="btn" id="logout" type="button">Đăng xuất</button>
+      <div class="menu" id="upMenu">
+        <button class="btn primary" id="upBtn" type="button" aria-haspopup="true" aria-expanded="false">Tải bài lên ▾</button>
+        <div class="menu-list" role="menu">
+          <a role="menuitem" target="_blank" rel="noopener" href="https://drive.google.com/drive/folders/1QBGx44NIATysnDg6cvws2-zX1qG7xBrY">Tuyến Bác sĩ<small>Thư mục FP: Bác Sĩ My Auris</small></a>
+          <a role="menuitem" target="_blank" rel="noopener" href="https://drive.google.com/drive/folders/1x7qYp1Sgz_Kz2PgiTtBsZ0dKPkCzmBWx">Tuyến Nha khoa My Auris<small>Thư mục FP: Nha Khoa My Auris</small></a>
+          <a role="menuitem" target="_blank" rel="noopener" href="https://drive.google.com/drive/folders/1V5ubGCcMA850tv5buROc_1i--yBAvnsR">Tuyến My Auris Việt Kiều<small>Thư mục FP: My Auris</small></a>
+          <a role="menuitem" target="_blank" rel="noopener" href="https://drive.google.com/drive/folders/1lvUlm2f_RbShbxDNjcjjTcXhDzRHds7t">Thư mục gốc "Bai cho dang"<small>Video = 1 bài · thư mục con ≥2 ảnh = 1 album</small></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="pageNotice"></div>
+
+  <section class="summary" aria-label="Tổng quan">
+    <div class="stat"><b id="sKho">–</b><span>Trong kho, chưa lên lịch</span></div>
+    <div class="stat"><b id="sLich">–</b><span>Đã lên lịch</span></div>
+    <div class="stat" id="sLoiBox"><b id="sLoi">–</b><span>Cần xử lý</span></div>
+    <div class="stat"><b id="sDang">–</b><span>Đã đăng</span></div>
+  </section>
+
+  <div class="bar">
+    <div class="chips" id="tuyenChips" role="group" aria-label="Lọc theo tuyến"></div>
+  </div>
+
+  <div class="tabsrow">
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-tab="kho" aria-selected="true" type="button">Kho bài <span class="n" id="nKho">0</span></button>
+      <button class="tab" role="tab" data-tab="lich" aria-selected="false" type="button">Sắp đăng <span class="n" id="nLich">0</span></button>
+      <button class="tab" role="tab" data-tab="xuly" aria-selected="false" type="button">Cần xử lý <span class="n bad" id="nXuly">0</span></button>
+      <button class="tab" role="tab" data-tab="dadang" aria-selected="false" type="button">Đã đăng gần đây</button>
+    </div>
+  </div>
+
+  <section id="view" aria-live="polite">
+    <p class="empty"><span class="spin"></span> Đang tải…</p>
+  </section>
+</main>
+
+<div class="actionbar" id="actionbar">
+  <div class="wrap">
+    <div><b id="selN">0</b> bài đã chọn · <button class="btn small" type="button" id="clearSel">Bỏ chọn</button></div>
+    <button class="btn primary" type="button" id="openSched">Lên lịch các bài đã chọn →</button>
+  </div>
+</div>
+
+<div class="overlay" id="ov"><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+"use strict";
+const SERVER = "Đăng bài My Auris";
+const TUYEN = {
+  bacsi:   {name:"Bác sĩ",              page:"FB: Bác Sĩ Nha Khoa My Auris", extra:["TikTok: Bác sĩ Nha Khoa My Auris"]},
+  nhakhoa: {name:"Nha khoa My Auris",   page:"FB: Nha Khoa My Auris",        extra:[]},
+  vietkieu:{name:"My Auris Việt Kiều",  page:"FB: My Auris",                 extra:[]}
+};
+const PHOTO_PAGES = ["FB: Bác Sĩ Nha Khoa My Auris","FB: Nha Khoa My Auris","FB: My Auris"];
+const FALLBACK_CHANNELS = ["FB: My Auris","FB: Nha Khoa My Auris","FB: Bác Sĩ Nha Khoa My Auris","FB: Nha khoa My Auris - Chuyên Răng Sứ Thẩm Mỹ","FB: Hồ Sơ Nụ Cười My Auris","FB: Auris - Nơi nụ cười bắt đầu từ bên trong","Instagram: my_auris","TikTok: Bác sĩ Nha Khoa My Auris"];
+
+const S = {mcp:null, mode:"", counts:{}, channels:FALLBACK_CHANNELS.slice(), kho:[], pending:[], issues:[], posted:[],
+  det:{}, chans:{}, sel:new Set(), tuyen:"all", tab:"kho", updated:null, errs:{}, loading:false, editRow:null};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cleanTitle = t => String(t||"").replace(/^\s*\[English Below\]\s*/i,"").trim();
+const pad = n => String(n).padStart(2,"0");
+const isoDate = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const toDMY = iso => { const [y,m,d] = iso.split("-"); return d+"/"+m+"/"+y; };
+const fromDMY = s => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s||""); return m ? m[3]+"-"+pad(m[2])+"-"+pad(m[1]) : ""; };
+const chanSend = c => c.startsWith("FB: ") ? c.slice(4) : c;
+const chanShort = c => c.replace(/^FB:\s*/,"").replace(/^Instagram:\s*/,"IG ").replace(/^TikTok:\s*/,"TikTok ");
+const isPhoto = it => (it.loai||"") !== "video";
+const loaiLabel = l => l==="video" ? "Video" : l==="album" ? "Album ảnh" : "Ảnh";
+
+/* ---------- Tuyến ---------- */
+function tuyenFromText(s){
+  s = String(s||"").toLowerCase();
+  if (s.includes("bác sĩ") || s.includes("bac si")) return "bacsi";
+  if (s.includes("nha khoa")) return "nhakhoa";
+  if (s.includes("my auris")) return "vietkieu";
+  return "";
+}
+function tuyenOf(it){
+  const k = it.kenh || "";
+  if (k && k !== "—"){
+    const l = k.toLowerCase();
+    if (l.includes("bác sĩ") || l.includes("bac si")) return "bacsi";
+    if (l === "fb: nha khoa my auris") return "nhakhoa";
+    if (l === "fb: my auris" || l.startsWith("instagram")) return "vietkieu";
+  }
+  const d = S.det[it.ma];
+  if (d && d.ghi_chu){
+    const m = /Thư mục:\s*([^|]+)/i.exec(d.ghi_chu);
+    if (m) return tuyenFromText(m[1].split("/")[0]);
+  }
+  return "";
+}
+function defaultChans(it){
+  if (isPhoto(it)) return PHOTO_PAGES.filter(c => S.channels.includes(c));
+  const t = TUYEN[tuyenOf(it)];
+  if (!t) return [];
+  return [t.page].concat(t.extra).filter(c => S.channels.includes(c));
+}
+function chansOf(it){ return S.chans[it.ma] || defaultChans(it); }
+const inTuyen = it => S.tuyen === "all" || tuyenOf(it) === S.tuyen || (S.tuyen === "none" && !tuyenOf(it));
+
+/* ---------- MCP ---------- */
+function errText(e){
+  const code = e && e.code;
+  switch (code){
+    case "needs_reauth": return "Kết nối “Đăng bài My Auris” đã hết hạn. Vào claude.ai → Settings → Connectors → Đăng bài My Auris → Connect lại, rồi bấm Tải lại.";
+    case "server_not_connected": return "Bạn chưa kết nối “Đăng bài My Auris”. Vào claude.ai → Settings → Connectors → Đăng bài My Auris → Connect (đăng nhập tài khoản n8n), rồi bấm Tải lại.";
+    case "selection_required": return "Bạn có nhiều kết nối cùng tên “Đăng bài My Auris”. Chọn một kết nối khi claude.ai hỏi, rồi bấm Tải lại.";
+    case "approval_required": case "consent_required": return "Trang cần bạn cho phép dùng kết nối “Đăng bài My Auris”. Bấm Tải lại và chọn Cho phép.";
+    case "not_in_manifest": return "Bạn đã tắt quyền dùng “Đăng bài My Auris” cho trang này. Bật lại trong cài đặt của trang, rồi bấm Tải lại.";
+    case "blocked_by_policy": return "Quản trị tổ chức đang chặn công cụ này với tài khoản của bạn.";
+    case "no_api": return e.message;
+    case "auth": return "Cần nhập lại mã chung của team.";
+    case "server_unavailable": return "Hệ thống đăng bài đang bận (có thể đang xử lý video lớn). Thử lại sau 1–2 phút.";
+    case "tool_error": case "app_error": return e.message || "Hệ thống báo lỗi.";
+    default: return (e && e.message) ? e.message : "Có lỗi khi gọi hệ thống đăng bài.";
+  }
+}
+const pageLevel = c => ["no_api","auth","needs_reauth","server_not_connected","selection_required","approval_required","consent_required","not_in_manifest","blocked_by_policy","not_granted","capability_disabled"].includes(c);
+
+function unwrap(p){
+  if (typeof p === "string"){ try { p = JSON.parse(p); } catch(_){ } }
+  if (Array.isArray(p)) p = p[0];
+  return p;
+}
+function getToken(){ try { return localStorage.getItem("mya_token") || ""; } catch(_){ return S.token || ""; } }
+function getName(){ try { return localStorage.getItem("mya_name") || ""; } catch(_){ return S.name || ""; } }
+function setName(n){ S.name = n; try { localStorage.setItem("mya_name", n); } catch(_){ } }
+function setToken(t){ S.token = t; try { if (t) localStorage.setItem("mya_token", t); else localStorage.removeItem("mya_token"); } catch(_){ } }
+async function call(tool, input){
+  const API = (window.MYA_CONFIG && window.MYA_CONFIG.API_URL) || "";
+  if (!API){ const e = new Error("Chưa cấu hình địa chỉ API (config.js)."); e.code = "no_api"; throw e; }
+  let r;
+  try {
+    r = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({action:tool, input: input || {}, token: getToken(), nguoi: getName()})});
+  } catch(_){ const e = new Error("Không kết nối được máy chủ n8n. Kiểm tra mạng, hoặc nhờ anh Duy kiểm tra API."); e.code = "server_unavailable"; throw e; }
+  if (r.status === 401 || r.status === 403){ setToken(""); showLogin("Mã chung không đúng (có thể vừa được đổi). Hỏi lại người quản lý."); const e = new Error("Cần đăng nhập lại."); e.code = "auth"; throw e; }
+  let p; try { p = await r.json(); } catch(_){ p = null; }
+  if (!r.ok){ const e = new Error((p && (p.loi || p.message)) || ("Máy chủ báo lỗi " + r.status + ".")); e.code = r.status >= 500 ? "server_unavailable" : "app_error"; throw e; }
+  p = unwrap(p);
+  if (p && p.ok === false){ const x = new Error(p.loi || p.message || "Hệ thống báo lỗi."); x.code = "app_error"; x.payload = p; throw x; }
+  return p || {};
+}
+function showLogin(msg){
+  openModal('<div class="modal-head"><h2>Vào hệ thống đăng bài</h2></div><div class="modal-body">'+
+    (msg ? '<div class="notice bad" style="margin:0">'+esc(msg)+'</div>' : '')+
+    '<label class="field">Tên của bạn (để biết ai lên lịch bài nào)<input type="text" id="lg-name" value="'+esc(getName())+'" placeholder="Vd: Lan"></label>'+
+    '<label class="field">Mã chung của team<input type="password" id="lg-code" autocomplete="current-password"></label>'+
+    '<p style="margin:0;font-size:13px;color:var(--muted)">Cả team dùng chung một mã, chỉ nhập một lần trên mỗi máy.</p></div>'+
+    '<div class="modal-foot"><span></span><button type="button" class="btn primary" id="lg-go">Vào hệ thống</button></div>', true);
+  modalCtx = {type:"confirm"};
+  const go = () => { const v = $("#lg-code").value.trim(), n = $("#lg-name").value.trim(); if (!v || !n){ toast("Nhập tên và mã chung của team."); return; } setName(n); setToken(v); closeModal(); load(); };
+  $("#lg-go").onclick = go;
+  $("#lg-code").addEventListener("keydown", ev => { if (ev.key === "Enter") go(); });
+}
+/* ---------- Load ---------- */
+async function load(){
+  if (S.loading) return;
+  S.loading = true; $("#reload").disabled = true; $("#reload").innerHTML = '<span class="spin"></span> Đang tải';
+  const jobs = [
+    ["tq", call("tong_quan", {})],
+    ["cx", call("danh_sach_bai", {loc:"can_xu_ly", so_luong:"50"})],
+    ["dl", call("danh_sach_bai", {loc:"da_len_lich", so_luong:"50"})],
+    ["vl", call("danh_sach_bai", {loc:"dang_viet_lai", so_luong:"50"})]
+  ];
+  const out = await Promise.allSettled(jobs.map(j => j[1]));
+  const res = {}; S.errs = {};
+  out.forEach((o,i) => { if (o.status === "fulfilled") res[jobs[i][0]] = o.value; else S.errs[jobs[i][0]] = o.reason; });
+
+  const errs = Object.values(S.errs);
+  const notice = $("#pageNotice");
+  if (errs.length === jobs.length || errs.some(e => pageLevel(e && e.code))){
+    const e = errs.find(e => pageLevel(e && e.code)) || errs[0];
+    notice.innerHTML = '<div class="notice bad"><b>Chưa tải được dữ liệu.</b> '+esc(errText(e))+'</div>';
+  } else if (errs.length){
+    notice.innerHTML = '<div class="notice warn">Một phần dữ liệu chưa tải được: '+esc(errText(errs[0]))+' Bấm Tải lại để thử lại.</div>';
+  } else notice.innerHTML = "";
+
+  if (res.tq){
+    const t = res.tq;
+    S.mode = t.mode || "";
+    S.counts = t.so_luong || {};
+    if (Array.isArray(t.kenh)){
+      const list = t.kenh.filter(k => k.da_ket_noi && !/iway/i.test(k.kenh) && !/chưa kết nối/i.test(k.kenh)).map(k => k.kenh);
+      if (list.length) S.channels = list;
+    }
+    S.posted = Array.isArray(t.da_dang_gan_day) ? t.da_dang_gan_day : [];
+  }
+  if (res.cx){
+    const bai = res.cx.bai || [];
+    S.kho = bai.filter(b => !b.kenh || b.kenh === "—");
+    S.issues = bai.filter(b => b.kenh && b.kenh !== "—");
+  }
+  if (res.vl){
+    const ids = new Set(S.issues.map(b => b.ma));
+    (res.vl.bai || []).forEach(b => { if (!ids.has(b.ma)) S.issues.push(b); });
+  }
+  if (res.dl) S.pending = (res.dl.bai || []).slice().sort((a,b) => (fromDMY(a.ngay)+a.gio).localeCompare(fromDMY(b.ngay)+b.gio));
+
+  const khoIds = new Set(S.kho.map(b => b.ma));
+  S.sel.forEach(m => { if (!khoIds.has(m)) S.sel.delete(m); });
+  S.updated = new Date();
+  S.loading = false; $("#reload").disabled = false; $("#reload").textContent = "Tải lại";
+  render();
+  loadDetails();
+}
+
+async function loadDetails(){
+  const need = S.kho.concat(S.issues).map(b => b.ma).filter(m => !S.det[m]);
+  for (let i = 0; i < need.length; i += 12){
+    const chunk = need.slice(i, i+12);
+    try {
+      const p = await call("danh_sach_bai", {ma: chunk.join(",")});
+      (p.bai || []).forEach(b => { S.det[b.ma] = b; });
+      render();
+    } catch(e){ break; }
+  }
+}
+
+/* ---------- Render ---------- */
+function render(){
+  // header
+  const m = $("#mode");
+  if (S.mode){
+    m.hidden = false;
+    m.className = "pill " + (S.mode.toUpperCase() === "LIVE" ? "live" : "test");
+    m.lastElementChild.textContent = S.mode.toUpperCase() === "LIVE" ? "LIVE · đăng lên trang thật" : "TEST · chỉ lên trang thử";
+  }
+  $("#stamp").textContent = S.updated ? "Cập nhật " + pad(S.updated.getHours()) + ":" + pad(S.updated.getMinutes()) : "";
+  const c = S.counts;
+  const xl = (c.cho_duyet_lai||0) + (c.loi||0) + (c.ai_dang_viet_lai||0);
+  $("#sKho").textContent = c.trong_kho_chua_len_lich != null ? c.trong_kho_chua_len_lich : S.kho.length;
+  $("#sLich").textContent = c.da_len_lich != null ? c.da_len_lich : S.pending.length;
+  $("#sLoi").textContent = c.loi != null ? xl : S.issues.length;
+  $("#sLoiBox").classList.toggle("alert", (c.loi != null ? xl : S.issues.length) > 0);
+  $("#sDang").textContent = c.da_dang != null ? c.da_dang : "–";
+
+  // tuyến chips
+  const all = S.kho;
+  const cnt = k => all.filter(it => k === "all" ? true : k === "none" ? !tuyenOf(it) : tuyenOf(it) === k).length;
+  const chips = [["all","Tất cả"],["bacsi","Bác sĩ"],["nhakhoa","Nha khoa My Auris"],["vietkieu","My Auris Việt Kiều"]];
+  if (cnt("none")) chips.push(["none","Chưa rõ tuyến"]);
+  $("#tuyenChips").innerHTML = chips.map(([k,l]) => '<button type="button" class="chip" data-tuyen="'+k+'" aria-pressed="'+(S.tuyen===k)+'">'+esc(l)+' <span class="n">'+cnt(k)+'</span></button>').join("");
+
+  $("#nKho").textContent = S.kho.filter(inTuyen).length;
+  $("#nLich").textContent = S.pending.filter(inTuyen).length;
+  $("#nXuly").textContent = S.issues.filter(inTuyen).length;
+  document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
+
+  const v = $("#view");
+  if (!S.updated){ v.innerHTML = '<p class="empty"><span class="spin"></span> Đang tải kho bài…</p>'; }
+  else if (S.tab === "kho") v.innerHTML = renderKho();
+  else if (S.tab === "lich") v.innerHTML = renderLich();
+  else if (S.tab === "xuly") v.innerHTML = renderXuly();
+  else v.innerHTML = renderPosted();
+
+  $("#selN").textContent = S.sel.size;
+  $("#openSched").textContent = "Lên lịch " + S.sel.size + " bài đã chọn →";
+  $("#actionbar").classList.toggle("show", S.sel.size > 0 && S.tab === "kho");
+}
+
+function tuyenTag(it){
+  const t = tuyenOf(it);
+  if (!t) return S.det[it.ma] || (it.kenh && it.kenh !== "—") ? '<span class="tag">Chưa rõ tuyến</span>' : "";
+  return '<span class="tag t-'+t+'">'+esc(TUYEN[t].name)+'</span>';
+}
+
+function renderKho(){
+  if (S.errs.cx && !S.kho.length) return '<p class="empty">Chưa tải được kho bài. '+esc(errText(S.errs.cx))+'</p>';
+  const list = S.kho.filter(inTuyen);
+  if (!list.length) return '<p class="empty">Kho trống. Tải video/ảnh vào thư mục Drive của tuyến (nút “Tải bài lên”). Sau 2–5 phút AI viết caption xong, bài sẽ hiện ở đây.</p>';
+  const allSel = list.every(it => S.sel.has(it.ma));
+  let h = '<div class="toolbar"><span>'+list.length+' bài chờ lên lịch · AI đã viết caption sẵn</span><button type="button" class="btn small" data-act="selall">'+(allSel?"Bỏ chọn tất cả":"Chọn tất cả")+'</button></div><div class="grid">';
+  list.forEach(it => {
+    const d = S.det[it.ma] || {};
+    const sel = S.sel.has(it.ma);
+    const ch = chansOf(it);
+    const link = d.link_media;
+    h += '<article class="card'+(sel?" selected":"")+'" data-ma="'+esc(it.ma)+'">'+
+      '<div class="card-top"><label class="pick"><input type="checkbox" data-act="sel" id="sel-'+esc(it.ma)+'" '+(sel?"checked":"")+' aria-label="Chọn bài"></label>'+
+      '<span class="tag">'+esc(loaiLabel(it.loai))+'</span>'+tuyenTag(it)+'</div>'+
+      '<h3>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</h3>'+
+      '<p class="file">'+esc(it.ten)+'</p>'+
+      '<p class="cap">'+esc(it.caption_ngan || "")+'</p>'+
+      '<p class="dest">Sẽ đăng lên: <b>'+(ch.length ? esc(ch.map(chanShort).join(" · ")) : "chọn kênh khi lên lịch")+'</b></p>'+
+      '<div class="card-actions">'+
+        '<button type="button" class="btn small primary" data-act="one">Lên lịch</button>'+
+        '<button type="button" class="btn small" data-act="cap">Xem & sửa caption</button>'+
+        (link ? '<a class="btn small" href="'+esc(link)+'" target="_blank" rel="noopener">Mở file</a>' : '')+
+        '<button type="button" class="btn small danger" data-act="skip">Bỏ</button>'+
+      '</div></article>';
+  });
+  return h + '</div>';
+}
+
+function statusClass(s){
+  s = String(s||"").toLowerCase();
+  if (s.includes("đã đăng") || s.includes("đã hẹn")) return "ok";
+  if (s.includes("lỗi")) return "bad";
+  if (s.includes("chờ duyệt")) return "warn";
+  return "wait";
+}
+function whenCell(it){
+  const iso = fromDMY(it.ngay);
+  let dayLabel = it.ngay || "";
+  if (iso){
+    const t = new Date(); const tm = new Date(); tm.setDate(t.getDate()+1);
+    if (iso === isoDate(t)) dayLabel = "Hôm nay"; else if (iso === isoDate(tm)) dayLabel = "Ngày mai";
+    else { const d = new Date(iso+"T00:00"); dayLabel = ["CN","T2","T3","T4","T5","T6","T7"][d.getDay()] + " " + it.ngay.slice(0,5); }
+  }
+  return '<div class="when"><b>'+esc(it.gio || "--:--")+'</b><span>'+esc(dayLabel)+'</span></div>';
+}
+
+function renderLich(){
+  if (S.errs.dl && !S.pending.length) return '<p class="empty">Chưa tải được lịch. '+esc(errText(S.errs.dl))+'</p>';
+  const list = S.pending.filter(inTuyen);
+  if (!list.length) return '<p class="empty">Chưa có bài nào đang chờ đăng trong tuyến này.</p>';
+  return '<div class="rows">' + list.map(it => {
+    const sending = /đang gửi/i.test(it.trang_thai||"");
+    const editing = S.editRow === it.ma;
+    return '<div class="row" data-ma="'+esc(it.ma)+'">'+ whenCell(it) +
+      '<div class="main"><h3>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</h3><div class="meta"><span class="tag">'+esc(chanShort(it.kenh||""))+'</span>'+tuyenTag(it)+'<span class="status '+statusClass(it.trang_thai)+'">'+esc(it.trang_thai)+'</span><span>'+esc(it.ten)+'</span></div></div>'+
+      '<div class="acts">'+
+        '<button type="button" class="btn small" data-act="move" '+(sending?"disabled":"")+'>Dời giờ</button>'+
+        '<button type="button" class="btn small" data-act="cap">Caption</button>'+
+        '<button type="button" class="btn small" data-act="draft" '+(sending?"disabled":"")+' title="Hủy lịch nhưng giữ bài để đăng sau">Tạm hoãn</button>'+
+        '<button type="button" class="btn small danger" data-act="cancel" '+(sending?"disabled":"")+'>Hủy</button>'+
+      '</div>'+
+      (sending ? '<p class="reason" style="color:var(--muted)">Đang gửi file sang hệ thống đăng, chờ chuyển sang “đã hẹn giờ” rồi mới dời / hủy được.</p>' : '')+
+      (editing ? '<div class="edit"><label class="field">Ngày mới<input type="date" id="mv-d" value="'+esc(fromDMY(it.ngay))+'"></label><label class="field">Giờ mới<input type="time" id="mv-t" value="'+esc(it.gio||"19:00")+'"></label><button type="button" class="btn small primary" data-act="movesave">Lưu giờ mới</button><button type="button" class="btn small" data-act="moveclose">Thôi</button></div>' : '')+
+    '</div>';
+  }).join("") + '</div>';
+}
+
+function renderXuly(){
+  const list = S.issues.filter(inTuyen);
+  if (!list.length) return '<p class="empty">Không có bài nào cần xử lý. 👍</p>';
+  return '<div class="rows">' + list.map(it => {
+    const d = S.det[it.ma] || {};
+    const isErr = /lỗi/i.test(it.trang_thai||"");
+    const rewriting = /viết lại/i.test(it.trang_thai||"");
+    return '<div class="row" data-ma="'+esc(it.ma)+'">'+ whenCell(it) +
+      '<div class="main"><h3>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</h3><div class="meta"><span class="tag">'+esc(it.kenh && it.kenh!=="—" ? chanShort(it.kenh) : "Kho")+'</span>'+tuyenTag(it)+'<span class="status '+statusClass(it.trang_thai)+'">'+esc(it.trang_thai)+'</span><span>'+esc(it.ten)+'</span></div></div>'+
+      '<div class="acts">'+
+        (!rewriting && it.kenh && it.kenh !== "—" ? '<button type="button" class="btn small primary" data-act="approve">'+(isErr?"Thử đăng lại":"Duyệt đăng")+'</button>' : '')+
+        '<button type="button" class="btn small" data-act="cap">Xem & sửa caption</button>'+
+        '<button type="button" class="btn small danger" data-act="cancel">Hủy</button>'+
+      '</div>'+
+      (isErr && d.ghi_chu ? '<p class="reason">Lý do: '+esc(d.ghi_chu)+'</p>' : '')+
+      (rewriting ? '<p class="reason" style="color:var(--muted)">AI đang viết caption mới, vài phút nữa bấm Tải lại.</p>' : '')+
+    '</div>';
+  }).join("") + '</div>';
+}
+
+function renderPosted(){
+  const list = S.posted.filter(it => S.tuyen === "all" || tuyenOf(it) === S.tuyen || (S.tuyen==="none" && !tuyenOf(it)));
+  if (!list.length) return '<p class="empty">Chưa có bài đã đăng gần đây trong tuyến này.</p>';
+  return '<div class="rows">' + list.map(it => {
+    const m = /(https?:\/\/\S+)/.exec(it.link_bai || "");
+    return '<div class="row">'+ whenCell({ngay:it.ngay, gio:""}).replace("--:--", "Đã đăng") +
+      '<div class="main"><h3>'+esc(it.ten)+'</h3><div class="meta"><span class="tag">'+esc(chanShort(it.kenh||""))+'</span>'+tuyenTag(it)+'</div></div>'+
+      '<div class="acts">'+(m ? '<a class="btn small" href="'+esc(m[1])+'" target="_blank" rel="noopener">Xem bài ↗</a>' : '')+'</div></div>';
+  }).join("") + '</div>';
+}
+
+/* ---------- Modal helpers ---------- */
+const ov = $("#ov"), modal = $("#modal");
+function openModal(html, narrow){ modal.className = "modal" + (narrow ? " narrow" : ""); modal.innerHTML = html; ov.classList.add("show"); const f = modal.querySelector("button, input, textarea"); if (f) f.focus(); }
+function closeModal(){ ov.classList.remove("show"); modal.innerHTML = ""; modalCtx = null; }
+let modalCtx = null;
+function confirmBox(title, text, okLabel, danger){
+  return new Promise(resolve => {
+    openModal('<div class="modal-head"><h2>'+esc(title)+'</h2></div><div class="modal-body"><p style="margin:0">'+text+'</p></div>'+
+      '<div class="modal-foot"><span></span><div style="display:flex;gap:8px"><button type="button" class="btn" id="cfNo">Thôi</button><button type="button" class="btn '+(danger?"danger":"primary")+'" id="cfYes">'+esc(okLabel)+'</button></div></div>', true);
+    modalCtx = {type:"confirm"};
+    $("#cfNo").onclick = () => { closeModal(); resolve(false); };
+    $("#cfYes").onclick = () => { closeModal(); resolve(true); };
+  });
+}
+let toastT;
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 4200); }
+
+/* ---------- Scheduling ---------- */
+function nextDefaultDate(){ const d = new Date(); const now = d.getHours()*60 + d.getMinutes(); if (now > 18*60+30) d.setDate(d.getDate()+1); return isoDate(d); }
+
+function openSchedule(mas){
+  const items = S.kho.filter(it => mas.includes(it.ma));
+  if (!items.length) return;
+  const rows = items.map(it => ({ma:it.ma, it, chans:chansOf(it).slice(), date:nextDefaultDate(), time:"19:00", st:"", msg:"", forbid:false}));
+  modalCtx = {type:"sched", rows, how: items.length > 1 ? "spread" : "same", start:nextDefaultDate(), time:"19:00", gap:1, running:false, done:false};
+  applyPlan();
+  drawSchedule();
+}
+function applyPlan(){
+  const c = modalCtx; if (!c || c.how === "each") return;
+  c.rows.forEach((r,i) => {
+    if (r.st === "ok") return;
+    const d = new Date(c.start + "T00:00");
+    if (c.how === "spread") d.setDate(d.getDate() + i * Math.max(1, +c.gap || 1));
+    r.date = isoDate(d); r.time = c.time;
+  });
+}
+function drawSchedule(){
+  const c = modalCtx;
+  const live = S.mode.toUpperCase() === "LIVE";
+  const left = c.rows.filter(r => r.st !== "ok").length;
+  let h = '<div class="modal-head"><h2>Lên lịch '+c.rows.length+' bài</h2><button type="button" class="x" data-act="close" aria-label="Đóng">×</button></div><div class="modal-body">';
+  h += '<div class="plan">'+
+    '<div class="field">Cách xếp giờ<div class="seg" role="group">'+
+      [["same","Cùng ngày giờ"],["spread","Mỗi ngày 1 bài"],["each","Tự chọn từng bài"]].map(([k,l]) => '<button type="button" data-how="'+k+'" aria-pressed="'+(c.how===k)+'">'+l+'</button>').join("")+
+    '</div></div>'+
+    (c.how !== "each" ? '<label class="field">'+(c.how==="spread"?"Bắt đầu từ ngày":"Ngày đăng")+'<input type="date" id="pl-d" value="'+c.start+'"></label><label class="field">Giờ đăng<input type="time" id="pl-t" value="'+c.time+'"></label>' : '')+
+    (c.how === "spread" ? '<label class="field">Cách nhau (ngày)<input type="number" id="pl-g" min="1" max="14" value="'+c.gap+'" style="width:80px"></label>' : '')+
+    '</div>';
+  h += '<div class="sched"><table><thead><tr><th>Bài</th><th>Kênh đăng</th><th>Ngày</th><th>Giờ</th></tr></thead><tbody>';
+  c.rows.forEach((r,i) => {
+    const lock = r.st === "ok" || c.running;
+    h += '<tr data-i="'+i+'"><td class="t"><b>'+esc(cleanTitle(r.it.tieu_de) || r.it.ten)+'</b><small>'+esc(loaiLabel(r.it.loai))+' · '+esc(r.it.ten)+'</small>'+
+      (r.st ? '<div class="res '+(r.st==="ok"?"ok":r.st==="run"?"wait":"bad")+'">'+(r.st==="run"?'<span class="spin"></span> Đang lên lịch…':esc(r.msg))+'</div>' : '')+
+      (r.forbid && r.st === "err" ? '<button type="button" class="btn small danger" data-act="force" style="margin-top:6px">Vẫn đăng (đã xem từ cấm)</button>' : '')+
+      '</td><td><div class="chtog">'+S.channels.map(ch => '<button type="button" data-ch="'+esc(ch)+'" aria-pressed="'+r.chans.includes(ch)+'" '+(lock?"disabled":"")+'>'+esc(chanShort(ch))+'</button>').join("")+'</div></td>'+
+      '<td><input type="date" data-f="date" value="'+r.date+'" '+(lock?"disabled":"")+' aria-label="Ngày đăng"></td>'+
+      '<td><input type="time" data-f="time" value="'+r.time+'" '+(lock?"disabled":"")+' aria-label="Giờ đăng"></td></tr>';
+  });
+  h += '</tbody></table></div></div>';
+  h += '<div class="modal-foot"><span class="pill '+(live?"live":"test")+'"><span class="dot"></span>'+(live?"LIVE · bài lên trang thật":"TEST · chỉ lên trang thử iWay Club")+'</span>'+
+    '<div style="display:flex;gap:8px">'+
+    (c.done ? '<button type="button" class="btn primary" data-act="finish">Xong</button>' :
+      '<button type="button" class="btn" data-act="close" '+(c.running?"disabled":"")+'>Thôi</button><button type="button" class="btn primary" data-act="run" '+(c.running||!left?"disabled":"")+'>'+(c.running?'<span class="spin"></span> Đang lên lịch…':'Lên lịch '+left+' bài')+'</button>')+
+    '</div></div>';
+  modal.className = "modal"; modal.innerHTML = h; ov.classList.add("show");
+}
+function validateRow(r){
+  if (!r.chans.length) return "Chưa chọn kênh nào.";
+  if (!r.date || !r.time) return "Thiếu ngày hoặc giờ.";
+  if (new Date(r.date+"T"+r.time) < new Date()) return "Giờ đăng đã qua, chọn giờ khác.";
+  return "";
+}
+async function runSchedule(onlyIndex){
+  const c = modalCtx; if (!c || c.running) return;
+  const idx = onlyIndex != null ? [onlyIndex] : c.rows.map((_,i) => i).filter(i => c.rows[i].st !== "ok");
+  let bad = false;
+  idx.forEach(i => { const r = c.rows[i]; const v = validateRow(r); if (v){ r.st = "err"; r.msg = v; r.forbid = false; bad = true; } else if (r.st === "err" && onlyIndex == null){ r.st = ""; r.msg = ""; } });
+  if (bad){ drawSchedule(); toast("Có bài chưa hợp lệ, xem dòng báo đỏ."); return; }
+  c.running = true; drawSchedule();
+  for (const i of idx){
+    const r = c.rows[i];
+    r.st = "run"; drawSchedule();
+    const lich = r.chans.map(ch => chanSend(ch) + " | " + toDMY(r.date) + " | " + r.time).join("; ");
+    try {
+      const p = await call("len_lich", {ma:r.ma, lich, van_dang: r.force ? "co" : ""});
+      r.st = "ok"; r.forbid = false;
+      r.msg = "Đã lên lịch: " + r.chans.map(chanShort).join(", ") + " · " + toDMY(r.date) + " " + r.time + (p && p.mode_note ? " — " + p.mode_note : "");
+      S.sel.delete(r.ma);
+    } catch(e){
+      r.st = "err"; r.msg = errText(e);
+      r.forbid = /từ cấm/i.test(r.msg);
+      if (e && (e.code === "server_unavailable" || e.code === "upstream_error")) r.msg += " Kiểm tra tab Sắp đăng trước khi thử lại để tránh đăng trùng.";
+    }
+    r.force = false;
+    drawSchedule();
+  }
+  c.running = false;
+  c.done = c.rows.every(r => r.st === "ok");
+  drawSchedule();
+  const ok = c.rows.filter(r => r.st === "ok").length;
+  toast(ok + "/" + c.rows.length + " bài đã lên lịch.");
+}
+
+/* ---------- Caption editor ---------- */
+async function openCaption(ma){
+  const base = S.kho.concat(S.pending, S.issues).find(b => b.ma === ma) || {ma};
+  modalCtx = {type:"cap", ma};
+  openModal('<div class="modal-head"><h2>Caption</h2><button type="button" class="x" data-act="close" aria-label="Đóng">×</button></div><div class="modal-body"><p class="empty"><span class="spin"></span> Đang tải caption đầy đủ…</p></div>');
+  let d = S.det[ma];
+  if (!d || d.caption == null){
+    try { const p = await call("danh_sach_bai", {ma}); d = (p.bai || [])[0]; if (d) S.det[ma] = d; }
+    catch(e){ if (modalCtx && modalCtx.ma === ma) modal.querySelector(".modal-body").innerHTML = '<div class="notice bad">'+esc(errText(e))+'</div>'; return; }
+  }
+  if (!modalCtx || modalCtx.ma !== ma || !d) return;
+  const scheduled = base.kenh && base.kenh !== "—";
+  modalCtx.orig = {tieu_de:d.tieu_de||"", caption:d.caption||"", hashtags:d.hashtags||""};
+  modal.innerHTML = '<div class="modal-head"><h2>'+esc(cleanTitle(d.tieu_de) || d.ten)+'</h2><button type="button" class="x" data-act="close" aria-label="Đóng">×</button></div>'+
+    '<div class="modal-body">'+
+    '<div class="meta" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)"><span class="tag">'+esc(loaiLabel(d.loai))+'</span>'+tuyenTag(base)+'<span>'+esc(d.ten)+'</span>'+(d.link_media?'<a class="caplink" href="'+esc(d.link_media)+'" target="_blank" rel="noopener">Mở file ↗</a>':'')+'</div>'+
+    (scheduled ? '<div class="notice warn" style="margin:0">Bài này đang có lịch trên <b>'+esc(chanShort(base.kenh))+'</b>. Lưu thay đổi sẽ đưa bài về “chờ duyệt” (lịch cũ tự hủy), sau đó bấm Duyệt đăng ở tab Cần xử lý.</div>' : '')+
+    '<label class="field">Tiêu đề<input type="text" id="ed-title" value="'+esc(d.tieu_de||"")+'"></label>'+
+    '<label class="field">Caption (phần tiếng Việt và tiếng Anh)<textarea id="ed-cap" rows="14">'+esc(d.caption||"")+'</textarea></label>'+
+    '<label class="field">Hashtag<input type="text" id="ed-tags" value="'+esc(d.hashtags||"")+'"></label>'+
+    '<p style="margin:0;font-size:12.5px;color:var(--muted)">Không hứa kết quả, không nêu giá ngoài ưu đãi đã cấu hình, không nêu tên khách. Từ cấm: tuyệt đối, 100%, vĩnh viễn, không đau, cam kết…</p>'+
+    '</div><div class="modal-foot"><button type="button" class="btn" data-act="regen">AI viết lại từ đầu</button><div style="display:flex;gap:8px"><button type="button" class="btn" data-act="close">Đóng</button><button type="button" class="btn primary" data-act="capsave">Lưu caption</button></div></div>';
+}
+async function saveCaption(){
+  const c = modalCtx; if (!c) return;
+  const now = {tieu_de:$("#ed-title").value, caption:$("#ed-cap").value, hashtags:$("#ed-tags").value};
+  const input = {ma:c.ma};
+  let changed = false;
+  ["tieu_de","caption","hashtags"].forEach(k => { if (now[k] !== c.orig[k]){ input[k] = now[k]; changed = true; } });
+  if (!changed){ closeModal(); return; }
+  const btn = modal.querySelector('[data-act="capsave"]'); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang lưu';
+  try { await call("sua_bai", input); delete S.det[c.ma]; closeModal(); toast("Đã lưu caption."); load(); }
+  catch(e){ btn.disabled = false; btn.textContent = "Lưu caption"; toast(errText(e)); }
+}
+
+/* ---------- Simple actions ---------- */
+async function act(tool, input, okMsg){
+  try { await call(tool, input); toast(okMsg); }
+  catch(e){ toast(errText(e)); }
+  load();
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", async ev => {
+  const t = ev.target.closest("[data-act],[data-tuyen],[data-tab],[data-how],[data-ch]");
+  const menu = $("#upMenu");
+  if (!ev.target.closest("#upMenu")){ menu.classList.remove("open"); $("#upBtn").setAttribute("aria-expanded","false"); }
+  if (!t) return;
+  if (t.dataset.tuyen){ S.tuyen = t.dataset.tuyen; render(); return; }
+  if (t.dataset.tab){ S.tab = t.dataset.tab; S.editRow = null; render(); return; }
+
+  // schedule modal controls
+  if (modalCtx && modalCtx.type === "sched" && modal.contains(t)){
+    const c = modalCtx;
+    if (t.dataset.how){ c.how = t.dataset.how; applyPlan(); drawSchedule(); return; }
+    if (t.dataset.ch){ const r = c.rows[+t.closest("tr").dataset.i]; const ch = t.dataset.ch; r.chans = r.chans.includes(ch) ? r.chans.filter(x => x !== ch) : r.chans.concat(ch); S.chans[r.ma] = r.chans.slice(); t.setAttribute("aria-pressed", String(r.chans.includes(ch))); return; }
+  }
+  const a = t.dataset.act; if (!a) return;
+  const card = t.closest("[data-ma]"); const ma = card && card.dataset.ma;
+  const item = ma && S.kho.concat(S.pending, S.issues).find(b => b.ma === ma);
+
+  switch (a){
+    case "sel": if (t.checked) S.sel.add(ma); else S.sel.delete(ma); render(); break;
+    case "selall": { const list = S.kho.filter(inTuyen); const all = list.every(it => S.sel.has(it.ma)); list.forEach(it => all ? S.sel.delete(it.ma) : S.sel.add(it.ma)); render(); break; }
+    case "one": openSchedule([ma]); break;
+    case "cap": openCaption(ma); break;
+    case "close": if (!(modalCtx && modalCtx.running)){ const was = modalCtx && modalCtx.type === "sched" && modalCtx.rows.some(r => r.st === "ok"); closeModal(); if (was) load(); } break;
+    case "finish": closeModal(); load(); break;
+    case "run": runSchedule(); break;
+    case "force": { const i = +t.closest("tr").dataset.i; modalCtx.rows[i].force = true; runSchedule(i); break; }
+    case "capsave": saveCaption(); break;
+    case "regen": { const m = modalCtx.ma; if (await confirmBox("AI viết lại caption?", "AI sẽ viết caption mới cho bài này trong vài phút. Caption hiện tại sẽ bị thay.", "Viết lại", false)) act("doi_trang_thai", {ma:m, trang_thai:"regenerate", ly_do:"Yêu cầu từ web đăng bài"}, "Đã gửi yêu cầu, vài phút nữa caption mới sẽ có."); break; }
+    case "skip": if (await confirmBox("Bỏ bài khỏi kho?", "<b>"+esc(item.ten)+"</b> sẽ rời khỏi kho và không được đăng. Muốn dùng lại phải nhờ quản trị.", "Bỏ bài", true)) act("doi_trang_thai", {ma, trang_thai:"skip", ly_do:"Bỏ trên web đăng bài"}, "Đã bỏ bài khỏi kho."); break;
+    case "cancel": if (await confirmBox("Hủy lịch đăng?", "Hủy <b>"+esc(item.ten)+"</b> trên <b>"+esc(chanShort(item.kenh||""))+"</b>. Bài sẽ không lên trang.", "Hủy lịch", true)) act("doi_trang_thai", {ma, trang_thai:"skip", ly_do:"Hủy trên web đăng bài"}, "Đã hủy lịch. Hệ thống tự gỡ lịch trong khoảng 2 phút."); break;
+    case "draft": if (await confirmBox("Tạm hoãn bài này?", "Lịch hiện tại sẽ bị hủy, bài chuyển về “chờ duyệt” ở tab Cần xử lý để đăng sau.", "Tạm hoãn", false)) act("doi_trang_thai", {ma, trang_thai:"draft", ly_do:"Tạm hoãn trên web đăng bài"}, "Đã tạm hoãn, bài nằm ở tab Cần xử lý."); break;
+    case "approve": if (await confirmBox("Duyệt đăng?", "<b>"+esc(item.ten)+"</b> trên <b>"+esc(chanShort(item.kenh||""))+"</b> sẽ đăng theo ngày giờ đã đặt ("+esc(item.ngay||"")+" "+esc(item.gio||"")+").", "Duyệt đăng", false)) act("duyet_dang", {ma}, "Đã duyệt đăng."); break;
+    case "move": S.editRow = ma; render(); break;
+    case "moveclose": S.editRow = null; render(); break;
+    case "movesave": {
+      const d = $("#mv-d").value, tm = $("#mv-t").value;
+      if (!d || !tm){ toast("Chọn ngày và giờ mới."); break; }
+      if (new Date(d+"T"+tm) < new Date()){ toast("Giờ mới đã qua, chọn giờ khác."); break; }
+      S.editRow = null;
+      act("sua_bai", {ma, ngay:toDMY(d), gio:tm}, "Đã dời sang " + toDMY(d) + " " + tm + ". Hệ thống cập nhật trong khoảng 2 phút.");
+      break;
+    }
+  }
+});
+document.addEventListener("change", ev => {
+  const t = ev.target;
+  if (!modalCtx || modalCtx.type !== "sched" || !modal.contains(t)) return;
+  const c = modalCtx;
+  if (t.id === "pl-d"){ c.start = t.value; applyPlan(); drawSchedule(); }
+  else if (t.id === "pl-t"){ c.time = t.value; applyPlan(); drawSchedule(); }
+  else if (t.id === "pl-g"){ c.gap = Math.max(1, +t.value || 1); applyPlan(); drawSchedule(); }
+  else if (t.dataset.f){ const r = c.rows[+t.closest("tr").dataset.i]; r[t.dataset.f] = t.value; if (c.how !== "each"){ c.how = "each"; drawSchedule(); } }
+});
+$("#upBtn").addEventListener("click", () => { const m = $("#upMenu"); m.classList.toggle("open"); $("#upBtn").setAttribute("aria-expanded", String(m.classList.contains("open"))); });
+$("#reload").addEventListener("click", () => load());
+$("#clearSel").addEventListener("click", () => { S.sel.clear(); render(); });
+$("#openSched").addEventListener("click", () => openSchedule(S.kho.filter(it => S.sel.has(it.ma)).map(it => it.ma)));
+ov.addEventListener("click", ev => { if (ev.target === ov && modalCtx && modalCtx.type !== "confirm" && !modalCtx.running) closeModal(); });
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modalCtx && modalCtx.type !== "confirm" && !modalCtx.running) closeModal(); });
+
+/* ---------- Boot ---------- */
+document.getElementById("logout").addEventListener("click", () => { setToken(""); showLogin(""); });
+if (!getToken() || !getName()) showLogin(""); else load();
+render();
+})();
+</script>
+</body>
+</html>
