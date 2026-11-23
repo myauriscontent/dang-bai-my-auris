@@ -1,4 +1,4 @@
-# Web API Đăng bài My Auris — việc cần làm trên n8n (khoảng 30 phút)
+# Web API Đăng bài My Auris — việc cần làm trên n8n (khoảng 1–2 giờ)
 
 Web tĩnh (GitHub Pages) gọi **một** webhook trên n8n.myauris.vn. Webhook chỉ chuyển tiếp yêu cầu tới các sub-workflow mà connector "Đăng bài My Auris" đang dùng — không đổi gì hệ thống đăng bài.
 
@@ -25,6 +25,21 @@ Web tĩnh (GitHub Pages) gọi **một** webhook trên n8n.myauris.vn. Webhook c
 | `sua_bai` | `ma`, `tieu_de`, `caption`, `hashtags`, `ngay`, `gio` |
 | `doi_trang_thai` | `ma`, `trang_thai` (skip / regenerate / draft), `ly_do` |
 | `duyet_dang` | `ma`, `dang_ngay`, `van_dang` |
+
+### 3 action mới (tải file trực tiếp + prompt theo tuyến)
+
+| action | input | trả về |
+|---|---|---|
+| `tao_link_tai_len` | `tuyen` (bacsi / nhakhoa / vietkieu), `ten_file`, `mime`, `kich_thuoc`, `album` (tên album, rỗng nếu bài lẻ) | `{ "ok": true, "upload_url": "…" }` |
+| `xem_prompt` | `{}` | `{ "ok": true, "prompts": { "bacsi": "…", "nhakhoa": "…", "vietkieu": "…" } }` (mỗi giá trị có thể là chuỗi hoặc `{ noi_dung, cap_nhat, nguoi }`) |
+| `sua_prompt` | `tuyen`, `prompt` | `{ "ok": true }` |
+
+**`tao_link_tai_len`** — web tải file thẳng lên Google Drive (video lớn không đi qua n8n):
+1. Chọn thư mục theo `tuyen`: bacsi → `FP: Bác Sĩ My Auris`, nhakhoa → `FP: Nha Khoa My Auris`, vietkieu → `FP: My Auris`. Nếu `album` có giá trị: tạo (hoặc dùng lại) thư mục con tên `album` trong thư mục tuyến.
+2. Node HTTP Request (credential Google Drive OAuth2): `POST https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true`, body `{ "name": ten_file, "parents": [folderId] }`, header `X-Upload-Content-Type: mime`, `X-Upload-Content-Length: kich_thuoc`, **`Origin: https://myauriscontent.github.io`** (bắt buộc để trình duyệt được phép tải lên).
+3. Trả header `Location` của response làm `upload_url`. Web tự `PUT` file vào đó; xong thì luồng quét Drive 2 phút/lần đang có tự nhận file như bình thường.
+
+**`xem_prompt` / `sua_prompt`** — luồng AI viết caption chọn prompt theo thư mục tuyến của file (FP: Bác Sĩ / FP: Nha Khoa / FP: My Auris). Lưu 3 prompt ở chỗ cấu hình đang lưu prompt hiện tại; `sua_prompt` ghi tab Log (người sửa = `nguoi`, giá trị cũ, giá trị mới).
 
 ## Mã chung
 

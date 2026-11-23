@@ -36,6 +36,21 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
+.drop{display:grid;place-items:center;gap:6px;border:2px dashed var(--line);border-radius:var(--r);padding:28px 16px;text-align:center;cursor:pointer;color:var(--muted);background:var(--bg)}
+.drop:hover,.drop.over{border-color:var(--accent);color:var(--ink)}
+.drop b{color:var(--ink);font-weight:600}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.flist{display:grid;gap:6px}
+.fitem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;font-size:13.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.fitem .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fitem small{color:var(--muted)}
+.pbar{grid-column:1/-1;height:6px;background:var(--bg);border-radius:99px;overflow:hidden}
+.pbar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.fitem.ok .pbar i{background:var(--ok)} .fitem.err .pbar i{background:var(--bad)}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:10px}
+.pcard h3{font-size:16px}
+
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding-bottom:96px}
 h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
@@ -197,15 +212,7 @@ textarea{width:100%;resize:vertical;line-height:1.5}
       <span class="stamp" id="stamp"></span>
       <button class="btn" id="reload" type="button">Tải lại</button>
       <button class="btn" id="logout" type="button">Đăng xuất</button>
-      <div class="menu" id="upMenu">
-        <button class="btn primary" id="upBtn" type="button" aria-haspopup="true" aria-expanded="false">Tải bài lên ▾</button>
-        <div class="menu-list" role="menu">
-          <a role="menuitem" target="_blank" rel="noopener" href="https://drive.google.com/drive/folders/1QBGx44NIATysnDg6cvws2-zX1qG7xBrY">Tuyến Bác sĩ<small>Thư mục FP: Bác Sĩ My Auris</small></a>
-          <a role="menuitem" target="_blank" rel="noopener" href="https://drive.google.com/drive/folders/1x7qYp1Sgz_Kz2PgiTtBsZ0dKPkCzmBWx">Tuyến Nha khoa My Auris<small>Thư mục FP: Nha Khoa My Auris</small></a>
-          <a role="menuitem" target="_blank" rel="noopener" href="https://drive.google.com/drive/folders/1V5ubGCcMA850tv5buROc_1i--yBAvnsR">Tuyến My Auris Việt Kiều<small>Thư mục FP: My Auris</small></a>
-          <a role="menuitem" target="_blank" rel="noopener" href="https://drive.google.com/drive/folders/1lvUlm2f_RbShbxDNjcjjTcXhDzRHds7t">Thư mục gốc "Bai cho dang"<small>Video = 1 bài · thư mục con ≥2 ảnh = 1 album</small></a>
-        </div>
-      </div>
+      <button class="btn primary" id="upBtn" type="button">Tải bài lên</button>
     </div>
   </div>
 </header>
@@ -230,6 +237,7 @@ textarea{width:100%;resize:vertical;line-height:1.5}
       <button class="tab" role="tab" data-tab="lich" aria-selected="false" type="button">Sắp đăng <span class="n" id="nLich">0</span></button>
       <button class="tab" role="tab" data-tab="xuly" aria-selected="false" type="button">Cần xử lý <span class="n bad" id="nXuly">0</span></button>
       <button class="tab" role="tab" data-tab="dadang" aria-selected="false" type="button">Đã đăng gần đây</button>
+      <button class="tab" role="tab" data-tab="prompt" aria-selected="false" type="button">Prompt caption</button>
     </div>
   </div>
 
@@ -462,6 +470,7 @@ function render(){
   else if (S.tab === "kho") v.innerHTML = renderKho();
   else if (S.tab === "lich") v.innerHTML = renderLich();
   else if (S.tab === "xuly") v.innerHTML = renderXuly();
+  else if (S.tab === "prompt") v.innerHTML = renderPrompt();
   else v.innerHTML = renderPosted();
 
   $("#selN").textContent = S.sel.size;
@@ -575,7 +584,7 @@ function renderPosted(){
 
 /* ---------- Modal helpers ---------- */
 const ov = $("#ov"), modal = $("#modal");
-function openModal(html, narrow){ modal.className = "modal" + (narrow ? " narrow" : ""); modal.innerHTML = html; ov.classList.add("show"); const f = modal.querySelector("button, input, textarea"); if (f) f.focus(); }
+function openModal(html, narrow){ modal.style.width = ""; modal.className = "modal" + (narrow ? " narrow" : ""); modal.innerHTML = html; ov.classList.add("show"); const f = modal.querySelector("button, input, textarea"); if (f) f.focus(); }
 function closeModal(){ ov.classList.remove("show"); modal.innerHTML = ""; modalCtx = null; }
 let modalCtx = null;
 function confirmBox(title, text, okLabel, danger){
@@ -638,7 +647,7 @@ function drawSchedule(){
     (c.done ? '<button type="button" class="btn primary" data-act="finish">Xong</button>' :
       '<button type="button" class="btn" data-act="close" '+(c.running?"disabled":"")+'>Thôi</button><button type="button" class="btn primary" data-act="run" '+(c.running||!left?"disabled":"")+'>'+(c.running?'<span class="spin"></span> Đang lên lịch…':'Lên lịch '+left+' bài')+'</button>')+
     '</div></div>';
-  modal.className = "modal"; modal.innerHTML = h; ov.classList.add("show");
+  modal.style.width = ""; modal.className = "modal"; modal.innerHTML = h; ov.classList.add("show");
 }
 function validateRow(r){
   if (!r.chans.length) return "Chưa chọn kênh nào.";
@@ -719,14 +728,140 @@ async function act(tool, input, okMsg){
   load();
 }
 
+/* ---------- Upload ---------- */
+const FOLDERS = {bacsi:"https://drive.google.com/drive/folders/1QBGx44NIATysnDg6cvws2-zX1qG7xBrY", nhakhoa:"https://drive.google.com/drive/folders/1x7qYp1Sgz_Kz2PgiTtBsZ0dKPkCzmBWx", vietkieu:"https://drive.google.com/drive/folders/1V5ubGCcMA850tv5buROc_1i--yBAvnsR"};
+const mb = n => (n/1048576).toFixed(n < 10485760 ? 1 : 0) + " MB";
+function openUpload(){
+  modalCtx = {type:"up", tuyen: TUYEN[S.tuyen] ? S.tuyen : "", mode:"le", album:"", files:[], running:false, done:false};
+  drawUpload();
+}
+function drawUpload(){
+  const c = modalCtx;
+  const isAlbum = c.mode === "album";
+  let h = '<div class="modal-head"><h2>Tải bài lên</h2><button type="button" class="x" data-act="close" aria-label="Đóng">×</button></div><div class="modal-body">';
+  h += '<div class="plan">'+
+    '<div class="field">Tuyến<div class="seg" role="group">'+Object.keys(TUYEN).map(k => '<button type="button" data-act="upt" data-v="'+k+'" aria-pressed="'+(c.tuyen===k)+'">'+esc(TUYEN[k].name)+'</button>').join("")+'</div></div>'+
+    '<div class="field">Loại bài<div class="seg" role="group"><button type="button" data-act="upm" data-v="le" aria-pressed="'+!isAlbum+'">Mỗi file là 1 bài</button><button type="button" data-act="upm" data-v="album" aria-pressed="'+isAlbum+'">Nhiều ảnh = 1 album</button></div></div>'+
+    (isAlbum ? '<label class="field">Tên album<input type="text" id="up-album" value="'+esc(c.album)+'" placeholder="Vd: Răng sứ tháng 11" '+(c.running?"disabled":"")+'></label>' : '')+
+  '</div>';
+  if (!c.done) h += '<label class="drop" id="up-drop" style="position:relative"><input type="file" id="up-file" multiple accept="'+(isAlbum?"image/*":"video/*,image/*")+'"><b>Kéo thả '+(isAlbum?"ảnh":"video / ảnh")+' vào đây</b><span>hoặc bấm để chọn file từ máy</span><small>'+(isAlbum?"2–10 ảnh, xếp theo tên file (01, 02…)":"Mỗi video hoặc ảnh thành 1 bài riêng")+'</small></label>';
+  if (c.files.length){
+    h += '<div class="flist">' + c.files.map((f,i) =>
+      '<div class="fitem '+(f.st||"")+'" data-fi="'+i+'"><span class="nm">'+esc(f.file.name)+' <small>· '+mb(f.file.size)+'</small></span>'+
+      (f.st === "ok" ? '<small style="color:var(--ok)">Đã tải lên</small>' : f.st === "err" ? '<small style="color:var(--bad)">'+esc(f.msg)+'</small>' : f.st === "run" ? '<small class="pct">'+(f.pct||0)+'%</small>' : (c.running ? '<small>Chờ…</small>' : '<button type="button" class="btn small" data-act="uprm" data-v="'+i+'">Bỏ</button>'))+
+      '<div class="pbar"><i style="width:'+(f.st==="ok"?100:(f.pct||0))+'%"></i></div></div>').join("") + '</div>';
+  }
+  if (c.done) h += '<div class="notice" style="margin:0;background:var(--ok-soft);border-color:transparent"><b>Đã tải lên '+c.files.length+' file.</b> AI đang xem nội dung và viết caption theo prompt của tuyến '+esc(TUYEN[c.tuyen].name)+'. Khoảng 2–5 phút nữa bài hiện trong Kho bài.</div>';
+  else h += '<p style="margin:0;font-size:12.5px;color:var(--muted)">Video lớn có thể mất vài phút, giữ trang mở đến khi tải xong. '+(c.tuyen?'Hoặc <a href="'+FOLDERS[c.tuyen]+'" target="_blank" rel="noopener">mở thư mục Drive của tuyến</a> để tải thẳng.':'')+'</p>';
+  h += '</div><div class="modal-foot"><span></span><div style="display:flex;gap:8px">'+
+    (c.done ? '<button type="button" class="btn primary" data-act="updone">Xong</button>' :
+    '<button type="button" class="btn" data-act="close" '+(c.running?"disabled":"")+'>Thôi</button><button type="button" class="btn primary" data-act="upgo" '+(c.running||!c.files.length?"disabled":"")+'>'+(c.running?'<span class="spin"></span> Đang tải lên…':'Tải lên '+c.files.filter(f=>f.st!=="ok").length+' file')+'</button>')+
+    '</div></div>';
+  modal.className = "modal narrow"; modal.style.width = "min(640px,100%)"; modal.innerHTML = h; ov.classList.add("show");
+  const inp = $("#up-file"), drop = $("#up-drop");
+  if (inp){
+    inp.onchange = () => { addFiles(inp.files); };
+    drop.ondragover = ev => { ev.preventDefault(); drop.classList.add("over"); };
+    drop.ondragleave = () => drop.classList.remove("over");
+    drop.ondrop = ev => { ev.preventDefault(); drop.classList.remove("over"); addFiles(ev.dataTransfer.files); };
+  }
+  const al = $("#up-album"); if (al) al.oninput = () => { c.album = al.value; };
+}
+function addFiles(list){
+  const c = modalCtx; if (!c || c.running) return;
+  const okType = f => c.mode === "album" ? /^image\//.test(f.type) : /^(video|image)\//.test(f.type);
+  let skipped = 0;
+  Array.from(list || []).forEach(f => { if (okType(f)) c.files.push({file:f}); else skipped++; });
+  if (skipped) toast(skipped + " file không phải " + (c.mode==="album"?"ảnh":"video/ảnh") + " nên đã bỏ qua.");
+  drawUpload();
+}
+function putFile(url, file, onp){
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest();
+    x.open("PUT", url);
+    x.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    x.upload.onprogress = e => { if (e.lengthComputable) onp(Math.round(e.loaded * 100 / e.total)); };
+    x.onload = () => (x.status >= 200 && x.status < 300) ? res() : rej(new Error("Google Drive không nhận file (mã " + x.status + ")."));
+    x.onerror = () => rej(new Error("Mất kết nối khi tải lên, thử lại."));
+    x.send(file);
+  });
+}
+async function runUpload(){
+  const c = modalCtx; if (!c || c.running) return;
+  if (!c.tuyen){ toast("Chọn tuyến trước khi tải lên."); return; }
+  const pending = c.files.filter(f => f.st !== "ok");
+  if (!pending.length) return;
+  if (c.mode === "album"){
+    c.album = ($("#up-album") || {}).value || c.album;
+    if (!c.album.trim()){ toast("Đặt tên album."); return; }
+    if (c.files.length < 2 || c.files.length > 10){ toast("Album cần từ 2 đến 10 ảnh."); return; }
+    c.files.sort((a,b) => a.file.name.localeCompare(b.file.name, "vi", {numeric:true}));
+  }
+  c.running = true; drawUpload();
+  for (let i = 0; i < c.files.length; i++){
+    const f = c.files[i]; if (f.st === "ok") continue;
+    f.st = "run"; f.pct = 0; drawUpload();
+    try {
+      const p = await call("tao_link_tai_len", {tuyen:c.tuyen, ten_file:f.file.name, mime:f.file.type || "application/octet-stream", kich_thuoc:String(f.file.size), album: c.mode === "album" ? c.album.trim() : ""});
+      if (!p.upload_url) throw new Error("API chưa trả về link tải lên.");
+      await putFile(p.upload_url, f.file, pct => {
+        f.pct = pct;
+        const row = modal.querySelector('[data-fi="'+i+'"]');
+        if (row){ row.querySelector(".pbar i").style.width = pct + "%"; const s = row.querySelector(".pct"); if (s) s.textContent = pct + "%"; }
+      });
+      f.st = "ok";
+    } catch(e){ f.st = "err"; f.msg = errText(e); }
+    drawUpload();
+  }
+  c.running = false;
+  c.done = c.files.every(f => f.st === "ok");
+  drawUpload();
+}
+
+/* ---------- Prompt theo tuyến ---------- */
+async function loadPrompts(){
+  S.promptErr = null;
+  try { const p = await call("xem_prompt", {}); S.prompts = p.prompts || {}; }
+  catch(e){ S.promptErr = e; S.prompts = null; }
+  if (S.tab === "prompt") render();
+}
+const promptText = v => v == null ? "" : typeof v === "string" ? v : (v.noi_dung || "");
+function renderPrompt(){
+  if (S.promptErr) return '<div class="notice bad"><b>Chưa tải được prompt.</b> '+esc(errText(S.promptErr))+' Nếu API trên n8n chưa có chức năng prompt (xem API.md), phần này chưa dùng được.</div>';
+  if (!S.prompts) return '<p class="empty"><span class="spin"></span> Đang tải prompt…</p>';
+  let h = '<p style="color:var(--muted);font-size:14px;margin:14px 0">Mỗi tuyến một prompt. AI dùng prompt của tuyến khi viết caption cho bài mới tải vào tuyến đó. Lưu prompt chỉ áp dụng cho bài mới; bài đang trong kho thì bấm “Viết lại caption trong kho”.</p><div class="rows">';
+  Object.keys(TUYEN).forEach(k => {
+    if (S.tuyen !== "all" && S.tuyen !== k) return;
+    const v = S.prompts[k];
+    const n = S.kho.filter(it => tuyenOf(it) === k).length;
+    h += '<section class="pcard"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h3><span class="tag t-'+k+'" style="font-size:13px">'+esc(TUYEN[k].name)+'</span></h3>'+
+      (v && typeof v === "object" && v.cap_nhat ? '<small style="color:var(--muted)">Sửa lần cuối '+esc(v.cap_nhat)+(v.nguoi?' · '+esc(v.nguoi):'')+'</small>' : '')+'</div>'+
+      '<textarea id="p-'+k+'" rows="12" aria-label="Prompt caption tuyến '+esc(TUYEN[k].name)+'">'+esc(promptText(v))+'</textarea>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn primary" data-act="psave" data-v="'+k+'">Lưu prompt</button>'+
+      '<button type="button" class="btn" data-act="pregen" data-v="'+k+'" '+(n?"":"disabled")+'>Viết lại caption trong kho ('+n+' bài)</button></div></section>';
+  });
+  return h + '</div>';
+}
+async function savePrompt(k, btn){
+  const txt = ($("#p-"+k) || {}).value || "";
+  if (!txt.trim()){ toast("Prompt đang trống."); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang lưu';
+  try { await call("sua_prompt", {tuyen:k, prompt:txt}); S.prompts[k] = txt; toast("Đã lưu prompt tuyến " + TUYEN[k].name + "."); loadPrompts(); }
+  catch(e){ toast(errText(e)); btn.disabled = false; btn.textContent = "Lưu prompt"; }
+}
+async function regenTuyen(k){
+  const list = S.kho.filter(it => tuyenOf(it) === k);
+  if (!list.length) return;
+  if (!(await confirmBox("Viết lại caption?", "AI sẽ viết lại caption cho <b>"+list.length+" bài</b> trong kho của tuyến "+esc(TUYEN[k].name)+" theo prompt hiện tại. Caption cũ của các bài này sẽ bị thay.", "Viết lại", false))) return;
+  act("doi_trang_thai", {ma:list.map(it => it.ma).join(","), trang_thai:"regenerate", ly_do:"Viết lại theo prompt mới (web)"}, "Đã gửi yêu cầu. Vài phút nữa caption mới sẽ có, bấm Tải lại.");
+}
+
 /* ---------- Events ---------- */
 document.addEventListener("click", async ev => {
   const t = ev.target.closest("[data-act],[data-tuyen],[data-tab],[data-how],[data-ch]");
-  const menu = $("#upMenu");
-  if (!ev.target.closest("#upMenu")){ menu.classList.remove("open"); $("#upBtn").setAttribute("aria-expanded","false"); }
   if (!t) return;
   if (t.dataset.tuyen){ S.tuyen = t.dataset.tuyen; render(); return; }
-  if (t.dataset.tab){ S.tab = t.dataset.tab; S.editRow = null; render(); return; }
+  if (t.dataset.tab){ S.tab = t.dataset.tab; S.editRow = null; render(); if (S.tab === "prompt" && !S.prompts) loadPrompts(); return; }
 
   // schedule modal controls
   if (modalCtx && modalCtx.type === "sched" && modal.contains(t)){
@@ -753,6 +888,13 @@ document.addEventListener("click", async ev => {
     case "cancel": if (await confirmBox("Hủy lịch đăng?", "Hủy <b>"+esc(item.ten)+"</b> trên <b>"+esc(chanShort(item.kenh||""))+"</b>. Bài sẽ không lên trang.", "Hủy lịch", true)) act("doi_trang_thai", {ma, trang_thai:"skip", ly_do:"Hủy trên web đăng bài"}, "Đã hủy lịch. Hệ thống tự gỡ lịch trong khoảng 2 phút."); break;
     case "draft": if (await confirmBox("Tạm hoãn bài này?", "Lịch hiện tại sẽ bị hủy, bài chuyển về “chờ duyệt” ở tab Cần xử lý để đăng sau.", "Tạm hoãn", false)) act("doi_trang_thai", {ma, trang_thai:"draft", ly_do:"Tạm hoãn trên web đăng bài"}, "Đã tạm hoãn, bài nằm ở tab Cần xử lý."); break;
     case "approve": if (await confirmBox("Duyệt đăng?", "<b>"+esc(item.ten)+"</b> trên <b>"+esc(chanShort(item.kenh||""))+"</b> sẽ đăng theo ngày giờ đã đặt ("+esc(item.ngay||"")+" "+esc(item.gio||"")+").", "Duyệt đăng", false)) act("duyet_dang", {ma}, "Đã duyệt đăng."); break;
+    case "upt": if (!modalCtx.running){ modalCtx.tuyen = t.dataset.v; drawUpload(); } break;
+    case "upm": if (!modalCtx.running){ modalCtx.mode = t.dataset.v; drawUpload(); } break;
+    case "uprm": if (!modalCtx.running){ modalCtx.files.splice(+t.dataset.v, 1); drawUpload(); } break;
+    case "upgo": runUpload(); break;
+    case "updone": closeModal(); load(); break;
+    case "psave": savePrompt(t.dataset.v, t); break;
+    case "pregen": regenTuyen(t.dataset.v); break;
     case "move": S.editRow = ma; render(); break;
     case "moveclose": S.editRow = null; render(); break;
     case "movesave": {
@@ -774,7 +916,7 @@ document.addEventListener("change", ev => {
   else if (t.id === "pl-g"){ c.gap = Math.max(1, +t.value || 1); applyPlan(); drawSchedule(); }
   else if (t.dataset.f){ const r = c.rows[+t.closest("tr").dataset.i]; r[t.dataset.f] = t.value; if (c.how !== "each"){ c.how = "each"; drawSchedule(); } }
 });
-$("#upBtn").addEventListener("click", () => { const m = $("#upMenu"); m.classList.toggle("open"); $("#upBtn").setAttribute("aria-expanded", String(m.classList.contains("open"))); });
+$("#upBtn").addEventListener("click", openUpload);
 $("#reload").addEventListener("click", () => load());
 $("#clearSel").addEventListener("click", () => { S.sel.clear(); render(); });
 $("#openSched").addEventListener("click", () => openSchedule(S.kho.filter(it => S.sel.has(it.ma)).map(it => it.ma)));

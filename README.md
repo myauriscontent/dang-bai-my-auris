@@ -14,5 +14,6 @@ Vào web bằng **tên của bạn + mã chung của team** (nhập một lần 
 ## Kỹ thuật
 
 - Web tĩnh: `index.html` + `config.js`, chạy trên GitHub Pages.
+- Tải file trực tiếp lên Drive, sửa prompt caption theo tuyến.
 - Dữ liệu và thao tác đi qua webhook n8n (`config.js → API_URL`). Mô tả API: [API.md](API.md).
 - Repo không chứa mật khẩu hay token nào.
