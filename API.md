@@ -4,10 +4,10 @@ Web tĩnh (GitHub Pages) gọi **một** webhook trên n8n.myauris.vn. Webhook c
 
 ## Workflow cần dựng (5 node)
 
-`Webhook` → `Code: kiểm tra mã` → `Switch theo action` → `Execute Workflow` (6 nhánh) → `Respond to Webhook`
+`Webhook` → `Code: kiểm tra mã cá nhân` → `Switch theo action` → `Execute Workflow` (6 nhánh) → `Respond to Webhook`
 
 1. **Webhook**: `POST`, path `dang-bai-api`, Respond = *Using 'Respond to Webhook' node*. Options → **Allowed Origins (CORS)** = địa chỉ GitHub Pages của web (vd `https://<tai-khoan>.github.io`).
-2. **Code**: so `token` với **một mã chung** của team (đặt trong biến môi trường hoặc ngay trong node). Sai → Respond `401`. Chỉ nhận 6 action bên dưới, khác → `400`.
+2. **Code**: so `token` với danh sách mã cá nhân. Sai → Respond `401`. Chỉ nhận 6 action bên dưới, khác → `400`.
 3. **Switch** theo `action`, mỗi nhánh gọi đúng sub-workflow của công cụ cùng tên, truyền `input` y nguyên. Ghi người thao tác vào tab Log là `Web – {nguoi}`.
 4. **Respond to Webhook**: trả nguyên JSON mà công cụ connector trả (`ok`, `loi`, `bai`, `mode`, `so_luong`, `kenh`, `da_dang_gan_day`, `mode_note`…). Web đã đọc đúng định dạng này.
 
@@ -41,9 +41,21 @@ Web tĩnh (GitHub Pages) gọi **một** webhook trên n8n.myauris.vn. Webhook c
 
 **`xem_prompt` / `sua_prompt`** — luồng AI viết caption chọn prompt theo thư mục tuyến của file (FP: Bác Sĩ / FP: Nha Khoa / FP: My Auris). Lưu 3 prompt ở chỗ cấu hình đang lưu prompt hiện tại; `sua_prompt` ghi tab Log (người sửa = `nguoi`, giá trị cũ, giá trị mới).
 
-## Mã chung
+## Tuyến (ds_tuyen / tao_tuyen)
 
-Một mã cho cả team, không tạo tài khoản. Đổi mã khi có người nghỉ việc: sửa ở node Code, báo lại team. Web chỉ cần nhập một lần trên mỗi máy.
+- Mỗi bài trong `danh_sach_bai` có trường `tuyen` (mã tuyến) — web lấy nhãn tuyến từ đây.
+- `ds_tuyen` → `{ "ok": true, "tuyen": [ … ] }`. Mỗi tuyến web đọc được các trường sau (trường nào thiếu thì bỏ qua):
+  - `ma` (hoặc `key`/`id`) — mã tuyến, khớp với trường `tuyen` của bài
+  - `ten` — tên hiển thị
+  - `thu_muc_id` hoặc `link_thu_muc` — thư mục Drive của tuyến (cho nút "mở thư mục Drive")
+  - `kenh_video` — kênh chọn sẵn khi lên lịch video, vd `["FB: Bác Sĩ Nha Khoa My Auris", "TikTok: Bác sĩ Nha Khoa My Auris"]`
+  - `kenh_anh` — kênh chọn sẵn cho ảnh/album (bỏ trống = 3 page chính)
+- `tao_tuyen` `{ ten }` → `{ "ok": true, "thong_bao": "…" }` (web hiện `thong_bao` nếu có).
+
+## Đăng nhập: mã riêng mỗi người
+
+- Web chỉ hỏi **mã cá nhân**, gửi trong trường `token`. Sai / bị khóa → `401` kèm `loi` (web hiện nguyên câu này).
+- Nếu `tong_quan` (hoặc `ds_tuyen`) trả thêm `nguoi_dung: "Tên"`, web hiện "Đang dùng: Tên" ở thanh trên cùng.
 
 ## Chi phí
 

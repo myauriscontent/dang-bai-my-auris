@@ -9,7 +9,7 @@ Web nội bộ để team tải bài, xem caption AI viết sẵn, chọn kênh 
 3. Tick các bài → **Lên lịch**: cùng ngày giờ, mỗi ngày 1 bài, hoặc tự chọn từng bài. Kênh được chọn sẵn theo tuyến, bấm để đổi.
 4. **Sắp đăng**: dời giờ, tạm hoãn, hủy. **Cần xử lý**: duyệt lại bài lỗi / vừa sửa. **Đã đăng**: link bài.
 
-Vào web bằng **tên của bạn + mã chung của team** (nhập một lần trên mỗi máy).
+Vào web bằng **mã cá nhân** do anh Duy cấp (nhập một lần trên mỗi máy).
 
 ## Kỹ thuật
 

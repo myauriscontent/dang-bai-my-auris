@@ -209,6 +209,7 @@ textarea{width:100%;resize:vertical;line-height:1.5}
       <span id="mode" class="pill" hidden><span class="dot"></span><span></span></span>
     </div>
     <div class="head-actions">
+      <span class="stamp" id="who"></span>
       <span class="stamp" id="stamp"></span>
       <button class="btn" id="reload" type="button">Tải lại</button>
       <button class="btn" id="logout" type="button">Đăng xuất</button>
@@ -261,11 +262,34 @@ textarea{width:100%;resize:vertical;line-height:1.5}
 (function(){
 "use strict";
 const SERVER = "Đăng bài My Auris";
-const TUYEN = {
-  bacsi:   {name:"Bác sĩ",              page:"FB: Bác Sĩ Nha Khoa My Auris", extra:["TikTok: Bác sĩ Nha Khoa My Auris"]},
-  nhakhoa: {name:"Nha khoa My Auris",   page:"FB: Nha Khoa My Auris",        extra:[]},
-  vietkieu:{name:"My Auris Việt Kiều",  page:"FB: My Auris",                 extra:[]}
+const DRIVE = id => "https://drive.google.com/drive/folders/" + id;
+/* Mặc định cho 3 tuyến cũ, dùng khi ds_tuyen chưa trả đủ thông tin */
+const KNOWN = {
+  bacsi:   {ten:"Bác sĩ",             kenh_video:["FB: Bác Sĩ Nha Khoa My Auris","TikTok: Bác sĩ Nha Khoa My Auris"], thu_muc:DRIVE("1QBGx44NIATysnDg6cvws2-zX1qG7xBrY")},
+  nhakhoa: {ten:"Nha khoa My Auris",  kenh_video:["FB: Nha Khoa My Auris"], thu_muc:DRIVE("1x7qYp1Sgz_Kz2PgiTtBsZ0dKPkCzmBWx")},
+  vietkieu:{ten:"My Auris Việt Kiều", kenh_video:["FB: My Auris"],          thu_muc:DRIVE("1V5ubGCcMA850tv5buROc_1i--yBAvnsR")}
 };
+let TUYEN = {}, TUYEN_ORDER = [];
+const asArr = v => Array.isArray(v) ? v.filter(Boolean).map(String) : (typeof v === "string" && v.trim() ? v.split(/[;,]/).map(x => x.trim()).filter(Boolean) : []);
+const slug = s => String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/gi,"d").toLowerCase().replace(/[^a-z0-9]+/g,"");
+function setTuyenList(list){
+  const map = {}, order = [];
+  (Array.isArray(list) ? list : []).forEach(o => {
+    if (o == null) return;
+    if (typeof o !== "object") o = {ma:String(o)};
+    const key = String(o.ma || o.key || o.id || o.slug || o.tuyen || slug(o.ten || o.name));
+    if (!key || map[key]) return;
+    const kn = KNOWN[key] || {};
+    const fid = o.thu_muc_id || o.folder_id || "";
+    const link = o.link_thu_muc || o.thu_muc_url || o.folder_url || o.link || (typeof o.thu_muc === "string" && /^https?:/.test(o.thu_muc) ? o.thu_muc : "") || (fid ? DRIVE(fid) : "");
+    const kv = asArr(o.kenh_video || o.kenh_mac_dinh || o.kenh);
+    map[key] = {ten: o.ten || o.name || o.ten_tuyen || kn.ten || key, thu_muc: link || kn.thu_muc || "", kenh_video: kv.length ? kv : (kn.kenh_video || []), kenh_anh: asArr(o.kenh_anh)};
+    order.push(key);
+  });
+  if (order.length){ TUYEN = map; TUYEN_ORDER = order; }
+}
+setTuyenList(Object.keys(KNOWN).map(k => Object.assign({ma:k}, KNOWN[k])));
+const tName = k => (TUYEN[k] && TUYEN[k].ten) || k || "";
 const PHOTO_PAGES = ["FB: Bác Sĩ Nha Khoa My Auris","FB: Nha Khoa My Auris","FB: My Auris"];
 const FALLBACK_CHANNELS = ["FB: My Auris","FB: Nha Khoa My Auris","FB: Bác Sĩ Nha Khoa My Auris","FB: Nha khoa My Auris - Chuyên Răng Sứ Thẩm Mỹ","FB: Hồ Sơ Nụ Cười My Auris","FB: Auris - Nơi nụ cười bắt đầu từ bên trong","Instagram: my_auris","TikTok: Bác sĩ Nha Khoa My Auris"];
 
@@ -293,6 +317,14 @@ function tuyenFromText(s){
   return "";
 }
 function tuyenOf(it){
+  if (it.tuyen){
+    const t = String(it.tuyen);
+    if (TUYEN[t]) return t;
+    const hit = TUYEN_ORDER.find(k => slug(TUYEN[k].ten) === slug(t) || slug(k) === slug(t));
+    return hit || t;
+  }
+  const d = S.det[it.ma];
+  if (d && d.tuyen) return tuyenOf({tuyen:d.tuyen});
   const k = it.kenh || "";
   if (k && k !== "—"){
     const l = k.toLowerCase();
@@ -300,18 +332,18 @@ function tuyenOf(it){
     if (l === "fb: nha khoa my auris") return "nhakhoa";
     if (l === "fb: my auris" || l.startsWith("instagram")) return "vietkieu";
   }
-  const d = S.det[it.ma];
-  if (d && d.ghi_chu){
-    const m = /Thư mục:\s*([^|]+)/i.exec(d.ghi_chu);
-    if (m) return tuyenFromText(m[1].split("/")[0]);
-  }
   return "";
 }
+function resolveChan(n){
+  if (S.channels.includes(n)) return n;
+  return S.channels.find(c => chanSend(c) === n || c.toLowerCase() === String(n).toLowerCase()) || "";
+}
 function defaultChans(it){
-  if (isPhoto(it)) return PHOTO_PAGES.filter(c => S.channels.includes(c));
   const t = TUYEN[tuyenOf(it)];
-  if (!t) return [];
-  return [t.page].concat(t.extra).filter(c => S.channels.includes(c));
+  let list;
+  if (isPhoto(it)) list = (t && t.kenh_anh.length) ? t.kenh_anh : PHOTO_PAGES;
+  else list = t ? t.kenh_video : [];
+  return list.map(resolveChan).filter(Boolean);
 }
 function chansOf(it){ return S.chans[it.ma] || defaultChans(it); }
 const inTuyen = it => S.tuyen === "all" || tuyenOf(it) === S.tuyen || (S.tuyen === "none" && !tuyenOf(it));
@@ -327,7 +359,7 @@ function errText(e){
     case "not_in_manifest": return "Bạn đã tắt quyền dùng “Đăng bài My Auris” cho trang này. Bật lại trong cài đặt của trang, rồi bấm Tải lại.";
     case "blocked_by_policy": return "Quản trị tổ chức đang chặn công cụ này với tài khoản của bạn.";
     case "no_api": case "no_server": return e.message;
-    case "auth": return "Cần nhập lại mã chung của team.";
+    case "auth": return "Cần nhập lại mã cá nhân.";
     case "server_unavailable": return "Hệ thống đăng bài đang bận (có thể đang xử lý video lớn). Thử lại sau 1–2 phút.";
     case "tool_error": case "app_error": return e.message || "Hệ thống báo lỗi.";
     default: return (e && e.message) ? e.message : "Có lỗi khi gọi hệ thống đăng bài.";
@@ -352,7 +384,7 @@ async function call(tool, input){
     r = await fetch(API, {method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({action:tool, input: input || {}, token: getToken(), nguoi: getName()})});
   } catch(_){ const e = new Error("Chưa kết nối được API trên n8n.myauris.vn. Nếu anh Duy chưa bật workflow dang-bai-api (hoặc chưa cho phép địa chỉ web này ở mục CORS), web chưa có dữ liệu. Nếu đã bật, kiểm tra lại mạng."); e.code = "no_server"; throw e; }
-  if (r.status === 401 || r.status === 403){ setToken(""); showLogin("Mã chung không đúng (có thể vừa được đổi). Hỏi lại người quản lý."); const e = new Error("Cần đăng nhập lại."); e.code = "auth"; throw e; }
+  if (r.status === 401 || r.status === 403){ let p0 = null; try { p0 = await r.clone().json(); } catch(_){ } setToken(""); showLogin((p0 && p0.loi) || "Mã không đúng hoặc đã bị khóa. Hỏi anh Duy để lấy mã."); const e = new Error("Cần đăng nhập lại."); e.code = "auth"; throw e; }
   let p; try { p = await r.json(); } catch(_){ p = null; }
   if (!r.ok){ const e = new Error((p && (p.loi || p.message)) || ("Máy chủ báo lỗi " + r.status + ".")); e.code = r.status >= 500 ? "server_unavailable" : "app_error"; throw e; }
   p = unwrap(p);
@@ -362,12 +394,11 @@ async function call(tool, input){
 function showLogin(msg){
   openModal('<div class="modal-head"><h2>Vào hệ thống đăng bài</h2></div><div class="modal-body">'+
     (msg ? '<div class="notice bad" style="margin:0">'+esc(msg)+'</div>' : '')+
-    '<label class="field">Tên của bạn (để biết ai lên lịch bài nào)<input type="text" id="lg-name" value="'+esc(getName())+'" placeholder="Vd: Lan"></label>'+
-    '<label class="field">Mã chung của team<input type="password" id="lg-code" autocomplete="current-password"></label>'+
-    '<p style="margin:0;font-size:13px;color:var(--muted)">Cả team dùng chung một mã, chỉ nhập một lần trên mỗi máy.</p></div>'+
+    '<label class="field">Mã cá nhân của bạn<input type="password" id="lg-code" autocomplete="current-password"></label>'+
+    '<p style="margin:0;font-size:13px;color:var(--muted)">Mỗi người một mã riêng, do anh Duy (itc@myauris.vn) cấp. Chỉ cần nhập một lần trên mỗi máy. Không chia sẻ mã cho người khác.</p></div>'+
     '<div class="modal-foot"><span></span><button type="button" class="btn primary" id="lg-go">Vào hệ thống</button></div>', true);
   modalCtx = {type:"confirm"};
-  const go = () => { const v = $("#lg-code").value.trim(), n = $("#lg-name").value.trim(); if (!v || !n){ toast("Nhập tên và mã chung của team."); return; } setName(n); setToken(v); closeModal(); load(); };
+  const go = () => { const v = $("#lg-code").value.trim(); if (!v){ toast("Nhập mã cá nhân."); return; } setName(""); setToken(v); closeModal(); load(); };
   $("#lg-go").onclick = go;
   $("#lg-code").addEventListener("keydown", ev => { if (ev.key === "Enter") go(); });
 }
@@ -377,6 +408,7 @@ async function load(){
   S.loading = true; $("#reload").disabled = true; $("#reload").innerHTML = '<span class="spin"></span> Đang tải';
   const jobs = [
     ["tq", call("tong_quan", {})],
+    ["ds", call("ds_tuyen", {})],
     ["cx", call("danh_sach_bai", {loc:"can_xu_ly", so_luong:"50"})],
     ["dl", call("danh_sach_bai", {loc:"da_len_lich", so_luong:"50"})],
     ["vl", call("danh_sach_bai", {loc:"dang_viet_lai", so_luong:"50"})]
@@ -394,6 +426,10 @@ async function load(){
     notice.innerHTML = '<div class="notice warn">Một phần dữ liệu chưa tải được: '+esc(errText(errs[0]))+' Bấm Tải lại để thử lại.</div>';
   } else notice.innerHTML = "";
 
+  if (res.ds) setTuyenList(res.ds.tuyen || res.ds.ds_tuyen || res.ds.danh_sach || res.ds.data || res.ds.items);
+  const who = (res.tq && (res.tq.nguoi_dung || res.tq.nguoi || res.tq.ten_nguoi_dung)) || (res.ds && (res.ds.nguoi_dung || res.ds.nguoi));
+  if (who){ S.user = typeof who === "object" ? (who.ten || who.name || "") : String(who); setName(S.user); }
+  $("#who").textContent = getName() ? "Đang dùng: " + getName() : "";
   if (res.tq){
     const t = res.tq;
     S.mode = t.mode || "";
@@ -456,9 +492,12 @@ function render(){
   // tuyến chips
   const all = S.kho;
   const cnt = k => all.filter(it => k === "all" ? true : k === "none" ? !tuyenOf(it) : tuyenOf(it) === k).length;
-  const chips = [["all","Tất cả"],["bacsi","Bác sĩ"],["nhakhoa","Nha khoa My Auris"],["vietkieu","My Auris Việt Kiều"]];
+  const chips = [["all","Tất cả"]].concat(TUYEN_ORDER.map(k => [k, tName(k)]));
+  const extra = Array.from(new Set(all.map(tuyenOf).filter(k => k && !TUYEN[k])));
+  extra.forEach(k => chips.push([k, k]));
   if (cnt("none")) chips.push(["none","Chưa rõ tuyến"]);
-  $("#tuyenChips").innerHTML = chips.map(([k,l]) => '<button type="button" class="chip" data-tuyen="'+k+'" aria-pressed="'+(S.tuyen===k)+'">'+esc(l)+' <span class="n">'+cnt(k)+'</span></button>').join("");
+  $("#tuyenChips").innerHTML = chips.map(([k,l]) => '<button type="button" class="chip" data-tuyen="'+esc(k)+'" aria-pressed="'+(S.tuyen===k)+'">'+esc(l)+' <span class="n">'+cnt(k)+'</span></button>').join("") +
+    '<button type="button" class="chip" data-act="newtuyen" style="border-style:dashed">+ Tạo tuyến</button>';
 
   $("#nKho").textContent = S.kho.filter(inTuyen).length;
   $("#nLich").textContent = S.pending.filter(inTuyen).length;
@@ -481,7 +520,7 @@ function render(){
 function tuyenTag(it){
   const t = tuyenOf(it);
   if (!t) return S.det[it.ma] || (it.kenh && it.kenh !== "—") ? '<span class="tag">Chưa rõ tuyến</span>' : "";
-  return '<span class="tag t-'+t+'">'+esc(TUYEN[t].name)+'</span>';
+  return '<span class="tag t-'+esc(t)+'">'+esc(tName(t))+'</span>';
 }
 
 function renderKho(){
@@ -729,7 +768,6 @@ async function act(tool, input, okMsg){
 }
 
 /* ---------- Upload ---------- */
-const FOLDERS = {bacsi:"https://drive.google.com/drive/folders/1QBGx44NIATysnDg6cvws2-zX1qG7xBrY", nhakhoa:"https://drive.google.com/drive/folders/1x7qYp1Sgz_Kz2PgiTtBsZ0dKPkCzmBWx", vietkieu:"https://drive.google.com/drive/folders/1V5ubGCcMA850tv5buROc_1i--yBAvnsR"};
 const mb = n => (n/1048576).toFixed(n < 10485760 ? 1 : 0) + " MB";
 function openUpload(){
   modalCtx = {type:"up", tuyen: TUYEN[S.tuyen] ? S.tuyen : "", mode:"le", album:"", files:[], running:false, done:false};
@@ -740,7 +778,7 @@ function drawUpload(){
   const isAlbum = c.mode === "album";
   let h = '<div class="modal-head"><h2>Tải bài lên</h2><button type="button" class="x" data-act="close" aria-label="Đóng">×</button></div><div class="modal-body">';
   h += '<div class="plan">'+
-    '<div class="field">Tuyến<div class="seg" role="group">'+Object.keys(TUYEN).map(k => '<button type="button" data-act="upt" data-v="'+k+'" aria-pressed="'+(c.tuyen===k)+'">'+esc(TUYEN[k].name)+'</button>').join("")+'</div></div>'+
+    '<div class="field">Tuyến<div class="seg" role="group">'+TUYEN_ORDER.map(k => '<button type="button" data-act="upt" data-v="'+k+'" aria-pressed="'+(c.tuyen===k)+'">'+esc(tName(k))+'</button>').join("")+'</div></div>'+
     '<div class="field">Loại bài<div class="seg" role="group"><button type="button" data-act="upm" data-v="le" aria-pressed="'+!isAlbum+'">Mỗi file là 1 bài</button><button type="button" data-act="upm" data-v="album" aria-pressed="'+isAlbum+'">Nhiều ảnh = 1 album</button></div></div>'+
     (isAlbum ? '<label class="field">Tên album<input type="text" id="up-album" value="'+esc(c.album)+'" placeholder="Vd: Răng sứ tháng 11" '+(c.running?"disabled":"")+'></label>' : '')+
   '</div>';
@@ -751,8 +789,8 @@ function drawUpload(){
       (f.st === "ok" ? '<small style="color:var(--ok)">Đã tải lên</small>' : f.st === "err" ? '<small style="color:var(--bad)">'+esc(f.msg)+'</small>' : f.st === "run" ? '<small class="pct">'+(f.pct||0)+'%</small>' : (c.running ? '<small>Chờ…</small>' : '<button type="button" class="btn small" data-act="uprm" data-v="'+i+'">Bỏ</button>'))+
       '<div class="pbar"><i style="width:'+(f.st==="ok"?100:(f.pct||0))+'%"></i></div></div>').join("") + '</div>';
   }
-  if (c.done) h += '<div class="notice" style="margin:0;background:var(--ok-soft);border-color:transparent"><b>Đã tải lên '+c.files.length+' file.</b> AI đang xem nội dung và viết caption theo prompt của tuyến '+esc(TUYEN[c.tuyen].name)+'. Khoảng 2–5 phút nữa bài hiện trong Kho bài.</div>';
-  else h += '<p style="margin:0;font-size:12.5px;color:var(--muted)">Video lớn có thể mất vài phút, giữ trang mở đến khi tải xong. '+(c.tuyen?'Hoặc <a href="'+FOLDERS[c.tuyen]+'" target="_blank" rel="noopener">mở thư mục Drive của tuyến</a> để tải thẳng.':'')+'</p>';
+  if (c.done) h += '<div class="notice" style="margin:0;background:var(--ok-soft);border-color:transparent"><b>Đã tải lên '+c.files.length+' file.</b> AI đang xem nội dung và viết caption theo prompt của tuyến '+esc(tName(c.tuyen))+'. Khoảng 2–5 phút nữa bài hiện trong Kho bài.</div>';
+  else h += '<p style="margin:0;font-size:12.5px;color:var(--muted)">Video lớn có thể mất vài phút, giữ trang mở đến khi tải xong. '+(c.tuyen && TUYEN[c.tuyen] && TUYEN[c.tuyen].thu_muc ?'Hoặc <a href="'+esc(TUYEN[c.tuyen].thu_muc)+'" target="_blank" rel="noopener">mở thư mục Drive của tuyến</a> để tải thẳng.':'')+'</p>';
   h += '</div><div class="modal-foot"><span></span><div style="display:flex;gap:8px">'+
     (c.done ? '<button type="button" class="btn primary" data-act="updone">Xong</button>' :
     '<button type="button" class="btn" data-act="close" '+(c.running?"disabled":"")+'>Thôi</button><button type="button" class="btn primary" data-act="upgo" '+(c.running||!c.files.length?"disabled":"")+'>'+(c.running?'<span class="spin"></span> Đang tải lên…':'Tải lên '+c.files.filter(f=>f.st!=="ok").length+' file')+'</button>')+
@@ -818,6 +856,26 @@ async function runUpload(){
   drawUpload();
 }
 
+/* ---------- Tạo tuyến ---------- */
+function openNewTuyen(){
+  openModal('<div class="modal-head"><h2>Tạo tuyến mới</h2><button type="button" class="x" data-act="close" aria-label="Đóng">×</button></div><div class="modal-body">'+
+    '<label class="field">Tên tuyến<input type="text" id="nt-name" placeholder="Vd: Lễ tân & Sale"></label>'+
+    '<p style="margin:0;font-size:13px;color:var(--muted)">Hệ thống tạo thư mục Drive cho tuyến mới. Sau đó vào tab Prompt caption để viết prompt riêng cho tuyến này.</p></div>'+
+    '<div class="modal-foot"><span></span><div style="display:flex;gap:8px"><button type="button" class="btn" data-act="close">Thôi</button><button type="button" class="btn primary" data-act="ntgo">Tạo tuyến</button></div></div>', true);
+  modalCtx = {type:"newtuyen"};
+}
+async function createTuyen(btn){
+  const ten = ($("#nt-name") || {}).value ? $("#nt-name").value.trim() : "";
+  if (!ten){ toast("Nhập tên tuyến."); return; }
+  if (TUYEN_ORDER.some(k => slug(TUYEN[k].ten) === slug(ten))){ toast("Đã có tuyến tên này."); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang tạo';
+  try {
+    const p = await call("tao_tuyen", {ten});
+    closeModal(); toast(p.thong_bao || p.message || ("Đã tạo tuyến " + ten + "."));
+    S.prompts = null; load();
+  } catch(e){ btn.disabled = false; btn.textContent = "Tạo tuyến"; toast(errText(e)); }
+}
+
 /* ---------- Prompt theo tuyến ---------- */
 async function loadPrompts(){
   S.promptErr = null;
@@ -830,13 +888,13 @@ function renderPrompt(){
   if (S.promptErr) return '<div class="notice bad"><b>Chưa tải được prompt.</b> '+esc(errText(S.promptErr))+' Nếu API trên n8n chưa có chức năng prompt (xem API.md), phần này chưa dùng được.</div>';
   if (!S.prompts) return '<p class="empty"><span class="spin"></span> Đang tải prompt…</p>';
   let h = '<p style="color:var(--muted);font-size:14px;margin:14px 0">Mỗi tuyến một prompt. AI dùng prompt của tuyến khi viết caption cho bài mới tải vào tuyến đó. Lưu prompt chỉ áp dụng cho bài mới; bài đang trong kho thì bấm “Viết lại caption trong kho”.</p><div class="rows">';
-  Object.keys(TUYEN).forEach(k => {
+  TUYEN_ORDER.forEach(k => {
     if (S.tuyen !== "all" && S.tuyen !== k) return;
     const v = S.prompts[k];
     const n = S.kho.filter(it => tuyenOf(it) === k).length;
-    h += '<section class="pcard"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h3><span class="tag t-'+k+'" style="font-size:13px">'+esc(TUYEN[k].name)+'</span></h3>'+
+    h += '<section class="pcard"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h3><span class="tag t-'+k+'" style="font-size:13px">'+esc(tName(k))+'</span></h3>'+
       (v && typeof v === "object" && v.cap_nhat ? '<small style="color:var(--muted)">Sửa lần cuối '+esc(v.cap_nhat)+(v.nguoi?' · '+esc(v.nguoi):'')+'</small>' : '')+'</div>'+
-      '<textarea id="p-'+k+'" rows="12" aria-label="Prompt caption tuyến '+esc(TUYEN[k].name)+'">'+esc(promptText(v))+'</textarea>'+
+      '<textarea id="p-'+k+'" rows="12" aria-label="Prompt caption tuyến '+esc(tName(k))+'">'+esc(promptText(v))+'</textarea>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn primary" data-act="psave" data-v="'+k+'">Lưu prompt</button>'+
       '<button type="button" class="btn" data-act="pregen" data-v="'+k+'" '+(n?"":"disabled")+'>Viết lại caption trong kho ('+n+' bài)</button></div></section>';
   });
@@ -846,13 +904,13 @@ async function savePrompt(k, btn){
   const txt = ($("#p-"+k) || {}).value || "";
   if (!txt.trim()){ toast("Prompt đang trống."); return; }
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang lưu';
-  try { await call("sua_prompt", {tuyen:k, prompt:txt}); S.prompts[k] = txt; toast("Đã lưu prompt tuyến " + TUYEN[k].name + "."); loadPrompts(); }
+  try { await call("sua_prompt", {tuyen:k, prompt:txt}); S.prompts[k] = txt; toast("Đã lưu prompt tuyến " + tName(k) + "."); loadPrompts(); }
   catch(e){ toast(errText(e)); btn.disabled = false; btn.textContent = "Lưu prompt"; }
 }
 async function regenTuyen(k){
   const list = S.kho.filter(it => tuyenOf(it) === k);
   if (!list.length) return;
-  if (!(await confirmBox("Viết lại caption?", "AI sẽ viết lại caption cho <b>"+list.length+" bài</b> trong kho của tuyến "+esc(TUYEN[k].name)+" theo prompt hiện tại. Caption cũ của các bài này sẽ bị thay.", "Viết lại", false))) return;
+  if (!(await confirmBox("Viết lại caption?", "AI sẽ viết lại caption cho <b>"+list.length+" bài</b> trong kho của tuyến "+esc(tName(k))+" theo prompt hiện tại. Caption cũ của các bài này sẽ bị thay.", "Viết lại", false))) return;
   act("doi_trang_thai", {ma:list.map(it => it.ma).join(","), trang_thai:"regenerate", ly_do:"Viết lại theo prompt mới (web)"}, "Đã gửi yêu cầu. Vài phút nữa caption mới sẽ có, bấm Tải lại.");
 }
 
@@ -892,6 +950,8 @@ document.addEventListener("click", async ev => {
     case "upm": if (!modalCtx.running){ modalCtx.mode = t.dataset.v; drawUpload(); } break;
     case "uprm": if (!modalCtx.running){ modalCtx.files.splice(+t.dataset.v, 1); drawUpload(); } break;
     case "upgo": runUpload(); break;
+    case "newtuyen": openNewTuyen(); break;
+    case "ntgo": createTuyen(t); break;
     case "updone": closeModal(); load(); break;
     case "psave": savePrompt(t.dataset.v, t); break;
     case "pregen": regenTuyen(t.dataset.v); break;
@@ -924,8 +984,8 @@ ov.addEventListener("click", ev => { if (ev.target === ov && modalCtx && modalCt
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modalCtx && modalCtx.type !== "confirm" && !modalCtx.running) closeModal(); });
 
 /* ---------- Boot ---------- */
-document.getElementById("logout").addEventListener("click", () => { setToken(""); showLogin(""); });
-if (!getToken() || !getName()) showLogin(""); else load();
+document.getElementById("logout").addEventListener("click", () => { setToken(""); setName(""); $("#who").textContent = ""; showLogin(""); });
+if (!getToken()) showLogin(""); else load();
 render();
 })();
 </script>
