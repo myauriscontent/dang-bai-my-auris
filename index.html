@@ -450,7 +450,16 @@ function resolveChan(n){
   if (S.channels.includes(n)) return n;
   return S.channels.find(c => chanSend(c) === n || c.toLowerCase() === String(n).toLowerCase()) || "";
 }
+function uploadChanKey(name){ return "mya_ch:" + slug(String(name || "").replace(/^\d{1,3}[_\-. ]+/, "")); }
+function chosenAtUpload(it){
+  const d = S.det[it.ma] || {};
+  const sys = asArr(it.kenh_chon || it.kenh_mac_dinh || d.kenh_chon || d.kenh_mac_dinh);
+  if (sys.length) return sys;
+  try { const v = JSON.parse(localStorage.getItem(uploadChanKey(it.ten)) || "null"); return Array.isArray(v) ? v : []; } catch(_){ return []; }
+}
 function defaultChans(it){
+  const up = chosenAtUpload(it).map(resolveChan).filter(Boolean);
+  if (up.length) return up;
   const t = TUYEN[tuyenOf(it)];
   let list;
   if (isPhoto(it)) list = (t && t.kenh_anh.length) ? t.kenh_anh : PHOTO_PAGES;
@@ -609,6 +618,7 @@ function render(){
   extra.forEach(k => chips.push([k, k]));
   if (cnt("none")) chips.push(["none","Chưa rõ tuyến"]);
   $("#tuyenChips").innerHTML = chips.map(([k,l]) => '<button type="button" class="chip" data-tuyen="'+esc(k)+'" aria-pressed="'+(S.tuyen===k)+'">'+esc(l)+' <span class="n">'+cnt(k)+'</span></button>').join("") +
+    (TUYEN[S.tuyen] ? '<button type="button" class="chip add" data-act="rentuyen" title="Đổi tên tuyến đang chọn">✎ Sửa tên tuyến</button>' : '') +
     '<button type="button" class="chip add" data-act="newtuyen">+ Tạo tuyến</button>';
 
   $("#nKho").textContent = S.kho.filter(inTuyen).length;
@@ -977,17 +987,26 @@ async function act(tool, input, okMsg){
 /* ---------- Upload ---------- */
 const mb = n => (n/1048576).toFixed(n < 10485760 ? 1 : 0) + " MB";
 function openUpload(){
-  modalCtx = {type:"up", tuyen: TUYEN[S.tuyen] ? S.tuyen : "", mode:"le", album:"", files:[], running:false, done:false};
+  modalCtx = {type:"up", tuyen: TUYEN[S.tuyen] ? S.tuyen : "", mode:"le", album:"", files:[], running:false, done:false, chans:null, chansTouched:false};
   drawUpload();
+}
+function upDefaultChans(c){
+  const t = TUYEN[c.tuyen];
+  const list = c.mode === "album" ? ((t && t.kenh_anh.length) ? t.kenh_anh : PHOTO_PAGES) : (t ? t.kenh_video : []);
+  return list.map(resolveChan).filter(Boolean);
 }
 function drawUpload(){
   const c = modalCtx;
   const isAlbum = c.mode === "album";
+  if (!c.chansTouched) c.chans = upDefaultChans(c);
   let h = '<div class="modal-head"><h2>Tải bài lên</h2><button type="button" class="x" data-act="close" aria-label="Đóng">×</button></div><div class="modal-body">';
   h += '<div class="plan">'+
     '<div class="field">Tuyến<div class="seg" role="group">'+TUYEN_ORDER.map(k => '<button type="button" data-act="upt" data-v="'+k+'" aria-pressed="'+(c.tuyen===k)+'">'+esc(tName(k))+'</button>').join("")+'</div></div>'+
     '<div class="field">Loại bài<div class="seg" role="group"><button type="button" data-act="upm" data-v="le" aria-pressed="'+!isAlbum+'">Mỗi file là 1 bài</button><button type="button" data-act="upm" data-v="album" aria-pressed="'+isAlbum+'">Nhiều ảnh = 1 album</button></div></div>'+
     (isAlbum ? '<label class="field">Tên album<input type="text" id="up-album" value="'+esc(c.album)+'" placeholder="Vd: Răng sứ tháng 11" '+(c.running?"disabled":"")+'></label>' : '')+
+    '<div class="field" style="flex-basis:100%">Đăng lên kênh (chọn được nhiều kênh)<div class="chtog" role="group" aria-label="Kênh đăng">'+
+      S.channels.map(ch => '<button type="button" data-act="upch" data-v="'+esc(ch)+'" aria-pressed="'+c.chans.includes(ch)+'" '+(c.running||c.done?"disabled":"")+'>'+esc(chanShort(ch))+'</button>').join("")+
+    '</div><small style="color:var(--muted)">'+(c.chans.length ? 'Đã chọn '+c.chans.length+' kênh. Khi lên lịch, các kênh này được chọn sẵn (vẫn đổi được).' : 'Chưa chọn kênh: khi lên lịch bạn sẽ chọn sau.')+'</small></div>'+
   '</div>';
   if (!c.done) h += '<label class="drop" id="up-drop" style="position:relative"><input type="file" id="up-file" multiple accept="'+(isAlbum?"image/*":"video/*,image/*")+'"><b>Kéo thả '+(isAlbum?"ảnh":"video / ảnh")+' vào đây</b><span>hoặc bấm để chọn file từ máy</span><small>'+(isAlbum?"2–10 ảnh. Sắp thứ tự bên dưới, ảnh số 1 là ảnh lớn":"Mỗi video hoặc ảnh thành 1 bài riêng")+'</small></label>';
   if (isAlbum && c.files.length && !c.running && !c.done){
@@ -1118,7 +1137,7 @@ async function runUpload(){
     const f = c.files[i]; if (f.st === "ok") continue;
     f.st = "run"; f.pct = 0; drawUpload();
     try {
-      const p = await call("tao_link_tai_len", {tuyen:c.tuyen, ten_file:f.sendName || f.file.name, mime:f.file.type || "application/octet-stream", kich_thuoc:String(f.file.size), album: c.mode === "album" ? c.album.trim() : ""});
+      const p = await call("tao_link_tai_len", {tuyen:c.tuyen, ten_file:f.sendName || f.file.name, mime:f.file.type || "application/octet-stream", kich_thuoc:String(f.file.size), album: c.mode === "album" ? c.album.trim() : "", kenh: c.chans.map(chanSend).join("; ")});
       if (!p.upload_url) throw new Error("API chưa trả về link tải lên.");
       await putFile(p.upload_url, f.file, pct => {
         f.pct = pct;
@@ -1126,6 +1145,7 @@ async function runUpload(){
         if (row){ row.querySelector(".pbar i").style.width = pct + "%"; const s = row.querySelector(".pct"); if (s) s.textContent = pct + "%"; }
       });
       f.st = "ok";
+      try { localStorage.setItem(uploadChanKey(c.mode === "album" ? c.album.trim() : (f.sendName || f.file.name)), JSON.stringify(c.chans)); } catch(_){ }
     } catch(e){ f.st = "err"; f.msg = errText(e); }
     drawUpload();
   }
@@ -1153,6 +1173,32 @@ async function createTuyen(btn){
     closeModal(); toast(p.thong_bao || p.message || ("Đã tạo tuyến " + ten + "."));
     S.prompts = null; load();
   } catch(e){ btn.disabled = false; btn.textContent = "Tạo tuyến"; toast(errText(e)); }
+}
+
+/* ---------- Sửa tên tuyến ---------- */
+function openRenameTuyen(k){
+  if (!TUYEN[k]) return;
+  openModal('<div class="modal-head"><h2>Sửa tên tuyến</h2><button type="button" class="x" data-act="close" aria-label="Đóng">×</button></div><div class="modal-body">'+
+    '<label class="field">Tên mới<input type="text" id="rn-name" value="'+esc(tName(k))+'"></label>'+
+    '<p style="margin:0;font-size:13px;color:var(--muted)">Chỉ đổi tên hiển thị. Bài, prompt và lịch đăng của tuyến giữ nguyên.</p></div>'+
+    '<div class="modal-foot"><span></span><div style="display:flex;gap:8px"><button type="button" class="btn" data-act="close">Thôi</button><button type="button" class="btn primary" data-act="rngo">Lưu tên</button></div></div>', true);
+  modalCtx = {type:"rename", k};
+}
+async function renameTuyen(btn){
+  const c = modalCtx; if (!c || !TUYEN[c.k]) return;
+  const ten = ($("#rn-name") || {}).value ? $("#rn-name").value.trim() : "";
+  if (!ten){ toast("Nhập tên tuyến."); return; }
+  if (ten === tName(c.k)){ closeModal(); return; }
+  if (TUYEN_ORDER.some(k => k !== c.k && slug(TUYEN[k].ten) === slug(ten))){ toast("Đã có tuyến tên này."); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Đang lưu';
+  try {
+    const p = await call("sua_tuyen", {ma:c.k, ten});
+    closeModal(); toast(p.thong_bao || ("Đã đổi tên tuyến thành " + ten + ".")); load();
+  } catch(e){
+    btn.disabled = false; btn.textContent = "Lưu tên";
+    const msg = errText(e);
+    toast(/action|không hợp lệ|không hỗ trợ|400/i.test(msg) ? "Hệ thống chưa có chức năng đổi tên tuyến (cần anh Duy bật lệnh sua_tuyen)." : msg);
+  }
 }
 
 /* ---------- Prompt theo tuyến ---------- */
@@ -1227,6 +1273,9 @@ document.addEventListener("click", async ev => {
     case "draft": if (await confirmBox("Tạm hoãn bài này?", "Lịch hiện tại sẽ bị hủy, bài chuyển về “chờ duyệt” ở tab Cần xử lý để đăng sau.", "Tạm hoãn", false)) act("doi_trang_thai", {ma, trang_thai:"draft", ly_do:"Tạm hoãn trên web đăng bài"}, "Đã tạm hoãn, bài nằm ở tab Cần xử lý."); break;
     case "approve": if (await confirmBox("Duyệt đăng?", "<b>"+esc(item.ten)+"</b> trên <b>"+esc(chanShort(item.kenh||""))+"</b> sẽ đăng theo ngày giờ đã đặt ("+esc(item.ngay||"")+" "+esc(item.gio||"")+").", "Duyệt đăng", false)) act("duyet_dang", {ma}, "Đã duyệt đăng."); break;
     case "upt": if (!modalCtx.running){ modalCtx.tuyen = t.dataset.v; drawUpload(); } break;
+    case "upch": if (!modalCtx.running){ const c = modalCtx, ch = t.dataset.v; c.chansTouched = true; c.chans = c.chans.includes(ch) ? c.chans.filter(x => x !== ch) : c.chans.concat(ch); drawUpload(); } break;
+    case "rentuyen": openRenameTuyen(S.tuyen); break;
+    case "rngo": renameTuyen(t); break;
     case "upm": if (!modalCtx.running){ modalCtx.mode = t.dataset.v; drawUpload(); } break;
     case "uprm": if (!modalCtx.running){ modalCtx.files.splice(+t.dataset.v, 1); drawUpload(); } break;
     case "upl": moveFile(+t.dataset.v, +t.dataset.v - 1); break;

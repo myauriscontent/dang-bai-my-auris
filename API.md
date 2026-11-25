@@ -76,6 +76,12 @@ Web tĩnh (GitHub Pages) gọi **một** webhook trên n8n.myauris.vn. Webhook c
   `"anh": ["<fileId1>", "<fileId2>", …]` theo đúng thứ tự đăng (hoặc `[{ "id": "…", "w": 1080, "h": 1350 }]` nếu có kích thước).
   Không có trường này thì web chỉ xem trước được trên máy đã tải album lên.
 
+## Kênh chọn lúc tải lên & đổi tên tuyến
+
+- `tao_link_tai_len` gửi thêm `kenh` (vd `"My Auris; Nha Khoa My Auris; TikTok: Bác sĩ Nha Khoa My Auris"`): các kênh người tải lên chọn sẵn.
+  (Tuỳ chọn) lưu lại và trả về trong `danh_sach_bai` là `kenh_chon` cho bài đó — để mọi máy đều thấy kênh đã chọn khi lên lịch. Không có thì web chỉ nhớ trên máy đã tải lên.
+- `sua_tuyen` `{ ma, ten }` → đổi tên hiển thị của tuyến (giữ nguyên `ma`, bài, prompt, lịch). Trả `{ "ok": true }`.
+
 ## Chi phí
 
 n8n tự cài trên máy chủ công ty: không giới hạn lượt chạy, không phát sinh phí.
