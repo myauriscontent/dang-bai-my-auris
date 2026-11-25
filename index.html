@@ -105,10 +105,22 @@ a{color:var(--accent)}
 .views button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-deep);font-weight:500}
 
 .barright{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.kenhsel{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border-radius:999px;padding:0 6px 0 14px;min-height:44px;color:var(--muted)}
-.kenhsel.on{background:var(--ink);color:var(--bg)}
-.kenhsel select{border:0;background:transparent;color:inherit;font-size:14px;padding:8px 6px;min-height:40px;cursor:pointer;max-width:260px}
-.kenhsel select option{color:#241d38;background:#fff}
+.kmenu{position:relative}
+.kbtn{display:inline-flex;align-items:center;gap:8px;border:0;background:var(--surface);color:var(--ink);border-radius:999px;padding:0 16px 0 14px;min-height:44px;cursor:pointer;font-size:14px;max-width:320px}
+.kbtn .pf{font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--accent)}
+.kbtn .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kbtn .car{opacity:.6;margin-left:2px}
+.kbtn.on{background:var(--ink);color:var(--bg)}
+.kbtn.on .pf{color:var(--bg);opacity:.7}
+.kpop{position:absolute;top:calc(100% + 8px);left:0;z-index:40;background:var(--surface);border-radius:18px;box-shadow:0 16px 48px rgba(30,15,60,.18);padding:8px;min-width:280px;max-height:420px;overflow:auto;border:1px solid var(--line)}
+.kpop .grp{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted);padding:12px 12px 4px}
+.kpop .grp:first-child{padding-top:4px}
+.kopt{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--ink);text-align:left;padding:9px 12px;border-radius:12px;cursor:pointer;font-size:14px;min-height:40px}
+.kopt:hover,.kopt:focus-visible{background:var(--bg)}
+.kopt[aria-selected="true"]{background:var(--accent-soft);color:var(--accent-deep);font-weight:500}
+.kopt .ck{margin-left:auto;opacity:0}
+.kopt[aria-selected="true"] .ck{opacity:1}
+.kpop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 /* Thông báo */
@@ -345,7 +357,10 @@ textarea{width:100%;resize:vertical;line-height:1.5}
   <div class="bar">
     <div class="chips" id="tuyenChips" role="group" aria-label="Lọc theo tuyến"></div>
     <div class="barright">
-      <label class="kenhsel"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16l-6 8v5l-4 2v-7z"/></svg><span class="sr">Lọc theo kênh</span><select id="kenhSel" aria-label="Lọc theo kênh"><option value="all">Tất cả kênh</option></select></label>
+      <div class="kmenu" id="kmenu">
+        <button type="button" class="kbtn" id="kbtn" data-act="kopen" aria-haspopup="listbox" aria-expanded="false">Tất cả kênh</button>
+        <div class="kpop" id="kpop" role="listbox" aria-label="Lọc theo kênh" hidden></div>
+      </div>
       <div class="views" id="views" role="group" aria-label="Kiểu xem"></div>
     </div>
   </div>
@@ -426,6 +441,8 @@ const isoDate = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()
 const toDMY = iso => { const [y,m,d] = iso.split("-"); return d+"/"+m+"/"+y; };
 const fromDMY = s => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s||""); return m ? m[3]+"-"+pad(m[2])+"-"+pad(m[1]) : ""; };
 const chanSend = c => c.startsWith("FB: ") ? c.slice(4) : c;
+const platformOf = c => /^tiktok/i.test(c) ? "TIKTOK" : /^instagram/i.test(c) ? "INSTAGRAM" : /^youtube/i.test(c) ? "YOUTUBE" : "FACEBOOK";
+const chanName = c => String(c || "").replace(/^(FB|Facebook|TikTok|Instagram|YouTube)\s*:\s*/i, "");
 const chanShort = c => c.replace(/^FB:\s*/,"").replace(/^Instagram:\s*/,"IG ").replace(/^TikTok:\s*/,"TikTok ");
 const isPhoto = it => (it.loai||"") !== "video";
 const loaiLabel = l => l==="video" ? "Video" : l==="album" ? "Album ảnh" : "Ảnh";
@@ -644,15 +661,14 @@ function render(){
   $("#heroTitle").textContent = !S.updated ? "Đang tải kho bài…" : S.tab === "kho" ? nK + " bài chờ lên lịch" : S.tab === "lich" ? S.pending.filter(inTuyen).length + " bài sắp đăng" : S.tab === "xuly" ? S.issues.filter(inTuyen).length + " bài cần xử lý" : S.tab === "dadang" ? "Bài đã đăng gần đây" : "Prompt caption theo tuyến";
   $("#views").innerHTML = renderViews();
   $("#views").hidden = S.tab !== "kho";
-  const ks = $("#kenhSel");
   if (S.kenh !== "all" && !S.channels.includes(S.kenh)) S.kenh = "all";
-  const pool = S.kho.concat(S.pending, S.issues);
-  ks.innerHTML = '<option value="all">Tất cả kênh</option>' + S.channels.map(ch => {
-    const n = pool.filter(it => inTuyenOnly(it) && (it.kenh && it.kenh !== "—" ? it.kenh === ch : chansOf(it).includes(ch))).length;
-    return '<option value="'+esc(ch)+'"'+(S.kenh===ch?' selected':'')+'>'+esc(chanShort(ch))+' ('+n+')</option>';
-  }).join("");
-  ks.value = S.kenh;
-  ks.parentElement.classList.toggle("on", S.kenh !== "all");
+  const kb = $("#kbtn"), CK = '<svg class="ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+  const CAR = '<svg class="car" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  kb.innerHTML = S.kenh === "all" ? '<span class="nm">Tất cả kênh</span>'+CAR : '<span class="pf">'+esc(platformOf(S.kenh))+'</span><span class="nm">'+esc(chanName(S.kenh))+'</span>'+CAR;
+  kb.classList.toggle("on", S.kenh !== "all");
+  const groups = ["FACEBOOK","TIKTOK","INSTAGRAM","YOUTUBE"].map(g => [g, S.channels.filter(c => platformOf(c) === g)]).filter(([,l]) => l.length);
+  $("#kpop").innerHTML = '<button type="button" class="kopt" role="option" data-act="kpick" data-v="all" aria-selected="'+(S.kenh==="all")+'">Tất cả kênh'+CK+'</button><hr>' +
+    groups.map(([g,l]) => '<div class="grp">'+g+'</div>' + l.map(c => '<button type="button" class="kopt" role="option" data-act="kpick" data-v="'+esc(c)+'" aria-selected="'+(S.kenh===c)+'">'+esc(chanName(c))+CK+'</button>').join("")).join("");
   const v = $("#view");
   if (!S.updated){ v.innerHTML = '<p class="empty"><span class="spin"></span> Đang tải kho bài…</p>'; }
   else if (S.tab === "kho") v.innerHTML = renderKho();
@@ -1263,6 +1279,7 @@ async function regenTuyen(k){
 /* ---------- Events ---------- */
 document.addEventListener("click", async ev => {
   const t = ev.target.closest("[data-act],[data-view],[data-tuyen],[data-tab],[data-how],[data-ch]");
+  if (!ev.target.closest("#kmenu")){ $("#kpop").hidden = true; $("#kbtn").setAttribute("aria-expanded","false"); }
   if (!t) return;
   if (t.dataset.view){ S.view = t.dataset.view; try { localStorage.setItem("mya_view", S.view); } catch(_){ } render(); return; }
   if (t.dataset.tuyen){ S.tuyen = t.dataset.tuyen; render(); return; }
@@ -1303,6 +1320,8 @@ document.addEventListener("click", async ev => {
     case "upr": moveFile(+t.dataset.v, +t.dataset.v + 1); break;
     case "upgo": runUpload(); break;
     case "newtuyen": openNewTuyen(); break;
+    case "kopen": { const pop = $("#kpop"); pop.hidden = !pop.hidden; t.setAttribute("aria-expanded", String(!pop.hidden)); if (!pop.hidden){ const sel = pop.querySelector('[aria-selected="true"]'); if (sel) sel.focus(); } break; }
+    case "kpick": S.kenh = t.dataset.v; $("#kpop").hidden = true; $("#kbtn").setAttribute("aria-expanded","false"); render(); $("#kbtn").focus(); break;
     case "wkprev": S.wk--; render(); break;
     case "wknext": S.wk++; render(); break;
     case "wktoday": S.wk = 0; render(); break;
@@ -1337,7 +1356,8 @@ $("#reload").addEventListener("click", () => load());
 $("#clearSel").addEventListener("click", () => { S.sel.clear(); render(); });
 $("#openSched").addEventListener("click", () => openSchedule(S.kho.filter(it => S.sel.has(it.ma)).map(it => it.ma)));
 ov.addEventListener("click", ev => { if (ev.target === ov && modalCtx && modalCtx.type !== "confirm" && !modalCtx.running) closeModal(); });
-document.addEventListener("keydown", ev => { if (ev.key === "Escape" && modalCtx && modalCtx.type !== "confirm" && !modalCtx.running) closeModal(); });
+document.addEventListener("keydown", ev => {
+  if (ev.key === "Escape" && !$("#kpop").hidden){ $("#kpop").hidden = true; $("#kbtn").setAttribute("aria-expanded","false"); $("#kbtn").focus(); return; } if (ev.key === "Escape" && modalCtx && modalCtx.type !== "confirm" && !modalCtx.running) closeModal(); });
 
 /* ---------- Boot ---------- */
 document.getElementById("logout").addEventListener("click", () => { setToken(""); setName(""); $("#who").textContent = ""; showLogin(""); });
