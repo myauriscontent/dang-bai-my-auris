@@ -104,6 +104,13 @@ a{color:var(--accent)}
 .views button{border:0;background:none;border-radius:999px;padding:0 14px;min-height:36px;cursor:pointer;font-size:13.5px;color:var(--muted);display:inline-flex;gap:6px;align-items:center}
 .views button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent-deep);font-weight:500}
 
+.barright{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.kenhsel{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border-radius:999px;padding:0 6px 0 14px;min-height:44px;color:var(--muted)}
+.kenhsel.on{background:var(--ink);color:var(--bg)}
+.kenhsel select{border:0;background:transparent;color:inherit;font-size:14px;padding:8px 6px;min-height:40px;cursor:pointer;max-width:260px}
+.kenhsel select option{color:#241d38;background:#fff}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
 /* Thông báo */
 .notice{border-radius:var(--r-sm);padding:12px 16px;margin:16px 0 0;font-size:14px;background:var(--surface)}
 .notice.bad{background:var(--bad-soft);color:var(--ink)}
@@ -337,7 +344,10 @@ textarea{width:100%;resize:vertical;line-height:1.5}
 
   <div class="bar">
     <div class="chips" id="tuyenChips" role="group" aria-label="Lọc theo tuyến"></div>
-    <div class="views" id="views" role="group" aria-label="Kiểu xem"></div>
+    <div class="barright">
+      <label class="kenhsel"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16l-6 8v5l-4 2v-7z"/></svg><span class="sr">Lọc theo kênh</span><select id="kenhSel" aria-label="Lọc theo kênh"><option value="all">Tất cả kênh</option></select></label>
+      <div class="views" id="views" role="group" aria-label="Kiểu xem"></div>
+    </div>
   </div>
 
   <section id="view" aria-live="polite">
@@ -405,7 +415,7 @@ function ownerHtml(it, label){
 const PHOTO_PAGES = ["FB: Bác Sĩ Nha Khoa My Auris","FB: Nha Khoa My Auris","FB: My Auris"];
 const FALLBACK_CHANNELS = ["FB: My Auris","FB: Nha Khoa My Auris","FB: Bác Sĩ Nha Khoa My Auris","FB: Nha khoa My Auris - Chuyên Răng Sứ Thẩm Mỹ","FB: Hồ Sơ Nụ Cười My Auris","FB: Auris - Nơi nụ cười bắt đầu từ bên trong","Instagram: my_auris","TikTok: Bác sĩ Nha Khoa My Auris"];
 
-const S = {view:(function(){ try { return localStorage.getItem("mya_view") || "grid"; } catch(_){ return "grid"; } })(), wk:0, mcp:null, mode:"", counts:{}, channels:FALLBACK_CHANNELS.slice(), kho:[], pending:[], issues:[], posted:[],
+const S = {kenh:"all", view:(function(){ try { return localStorage.getItem("mya_view") || "grid"; } catch(_){ return "grid"; } })(), wk:0, mcp:null, mode:"", counts:{}, channels:FALLBACK_CHANNELS.slice(), kho:[], pending:[], issues:[], posted:[],
   det:{}, chans:{}, sel:new Set(), tuyen:"all", tab:"kho", updated:null, errs:{}, loading:false, editRow:null};
 
 const $ = s => document.querySelector(s);
@@ -467,7 +477,9 @@ function defaultChans(it){
   return list.map(resolveChan).filter(Boolean);
 }
 function chansOf(it){ return S.chans[it.ma] || defaultChans(it); }
-const inTuyen = it => S.tuyen === "all" || tuyenOf(it) === S.tuyen || (S.tuyen === "none" && !tuyenOf(it));
+const inKenh = it => S.kenh === "all" || (it.kenh && it.kenh !== "—" ? it.kenh === S.kenh || chanSend(it.kenh) === chanSend(S.kenh) : chansOf(it).includes(S.kenh));
+const inTuyenOnly = it => S.tuyen === "all" || tuyenOf(it) === S.tuyen || (S.tuyen === "none" && !tuyenOf(it));
+const inTuyen = it => inTuyenOnly(it) && inKenh(it);
 
 /* ---------- MCP ---------- */
 function errText(e){
@@ -611,7 +623,7 @@ function render(){
   $("#sDang").textContent = c.da_dang != null ? c.da_dang : "–";
 
   // tuyến chips
-  const all = S.kho;
+  const all = S.kho.filter(inKenh);
   const cnt = k => all.filter(it => k === "all" ? true : k === "none" ? !tuyenOf(it) : tuyenOf(it) === k).length;
   const chips = [["all","Tất cả"]].concat(TUYEN_ORDER.map(k => [k, tName(k)]));
   const extra = Array.from(new Set(all.map(tuyenOf).filter(k => k && !TUYEN[k])));
@@ -632,6 +644,15 @@ function render(){
   $("#heroTitle").textContent = !S.updated ? "Đang tải kho bài…" : S.tab === "kho" ? nK + " bài chờ lên lịch" : S.tab === "lich" ? S.pending.filter(inTuyen).length + " bài sắp đăng" : S.tab === "xuly" ? S.issues.filter(inTuyen).length + " bài cần xử lý" : S.tab === "dadang" ? "Bài đã đăng gần đây" : "Prompt caption theo tuyến";
   $("#views").innerHTML = renderViews();
   $("#views").hidden = S.tab !== "kho";
+  const ks = $("#kenhSel");
+  if (S.kenh !== "all" && !S.channels.includes(S.kenh)) S.kenh = "all";
+  const pool = S.kho.concat(S.pending, S.issues);
+  ks.innerHTML = '<option value="all">Tất cả kênh</option>' + S.channels.map(ch => {
+    const n = pool.filter(it => inTuyenOnly(it) && (it.kenh && it.kenh !== "—" ? it.kenh === ch : chansOf(it).includes(ch))).length;
+    return '<option value="'+esc(ch)+'"'+(S.kenh===ch?' selected':'')+'>'+esc(chanShort(ch))+' ('+n+')</option>';
+  }).join("");
+  ks.value = S.kenh;
+  ks.parentElement.classList.toggle("on", S.kenh !== "all");
   const v = $("#view");
   if (!S.updated){ v.innerHTML = '<p class="empty"><span class="spin"></span> Đang tải kho bài…</p>'; }
   else if (S.tab === "kho") v.innerHTML = renderKho();
@@ -730,7 +751,7 @@ function renderWeek(){
   const end = days[6];
   const today = isoDate(new Date());
   const ev = S.pending.filter(inTuyen);
-  const posted = S.posted.filter(it => S.tuyen === "all" || tuyenOf(it) === S.tuyen);
+  const posted = S.posted.filter(it => inTuyen(it));
   const kho = S.kho.filter(inTuyen);
   const legend = TUYEN_ORDER.map(k => '<span><i style="background:var(--t-'+esc(k)+', var(--accent))"></i>'+esc(tName(k))+'</span>').join("");
   let h = '<div class="week"><aside class="wk-side"><div style="display:flex;justify-content:space-between;align-items:baseline"><h3>Kho bài</h3><span class="stamp">'+kho.length+' bài chờ xếp</span></div>';
@@ -821,7 +842,7 @@ function renderXuly(){
 }
 
 function renderPosted(){
-  const list = S.posted.filter(it => S.tuyen === "all" || tuyenOf(it) === S.tuyen || (S.tuyen==="none" && !tuyenOf(it)));
+  const list = S.posted.filter(it => inTuyen(it));
   if (!list.length) return '<p class="empty">Chưa có bài đã đăng gần đây trong tuyến này.</p>';
   return '<div class="rows">' + list.map(it => {
     const m = /(https?:\/\/\S+)/.exec(it.link_bai || "");
@@ -1302,6 +1323,7 @@ document.addEventListener("click", async ev => {
   }
 });
 document.addEventListener("change", ev => {
+  if (ev.target.id === "kenhSel"){ S.kenh = ev.target.value; render(); return; }
   const t = ev.target;
   if (!modalCtx || modalCtx.type !== "sched" || !modal.contains(t)) return;
   const c = modalCtx;
