@@ -57,6 +57,18 @@ Web tĩnh (GitHub Pages) gọi **một** webhook trên n8n.myauris.vn. Webhook c
 - Web chỉ hỏi **mã cá nhân**, gửi trong trường `token`. Sai / bị khóa → `401` kèm `loi` (web hiện nguyên câu này).
 - Nếu `tong_quan` (hoặc `ds_tuyen`) trả thêm `nguoi_dung: "Tên"`, web hiện "Đang dùng: Tên" ở thanh trên cùng.
 
+## Người đang đăng nhập & người quản lý bài (web đã sẵn, chờ API)
+
+1. **Tên người đang đăng nhập** — thêm vào kết quả `tong_quan`:
+   `"nguoi_dung": { "ten": "Lan", "email": "lan@myauris.vn" }` (hoặc chỉ chuỗi tên). Lấy theo mã cá nhân gửi lên.
+   Web hiện ở góc trên: "Đang đăng nhập: Lan".
+2. **Người quản lý từng bài** — thêm vào mỗi bài trong `danh_sach_bai` (cả danh sách lẫn xem theo mã):
+   `"nguoi_quan_ly": { "ten": "Lan", "email": "lan@myauris.vn" }`
+   - Bài tải lên qua web: người có mã đã gọi `tao_link_tai_len` (lưu lại lúc tạo link, khớp theo tên file).
+   - Bài cũ tải thẳng lên Drive: chủ sở hữu file trên Drive (trường `owners` của file).
+   Web hiện "Quản lý: Lan" trên thẻ bài, danh sách và lịch tuần.
+3. (Tuỳ chọn) Dòng kênh đã lên lịch: `"nguoi_len_lich": "Tên"` — web hiện "Lên lịch: Tên" ở tab Sắp đăng.
+
 ## Chi phí
 
 n8n tự cài trên máy chủ công ty: không giới hạn lượt chạy, không phát sinh phí.

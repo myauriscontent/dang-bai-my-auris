@@ -67,6 +67,11 @@ a{color:var(--accent)}
 .pill.test{background:var(--warn-soft);color:var(--warn)}
 .pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
 .stamp{color:var(--muted);font-size:12.5px}
+.me{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border-radius:999px;padding:3px 12px 3px 3px;font-size:13px;color:var(--ink);font-weight:500}
+.av{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:600;flex:0 0 auto}
+.me .av{width:26px;height:26px;font-size:12px}
+.owner{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.owner b{color:var(--ink);font-weight:500}
 
 /* Nút */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:var(--accent-soft);color:var(--accent-deep);padding:0 16px;min-height:40px;border-radius:999px;cursor:pointer;font-weight:500;font-size:14px;text-decoration:none;white-space:nowrap}
@@ -275,7 +280,7 @@ textarea{width:100%;resize:vertical;line-height:1.5}
   </header>
   <div class="util">
     <span id="mode" class="pill" hidden><span class="dot"></span><span></span></span>
-    <span class="stamp" id="who"></span>
+    <span id="who"></span>
     <span class="stamp" id="stamp"></span>
     <button class="lnk" id="reload" type="button">Tải lại</button>
     <button class="lnk" id="logout" type="button">Đăng xuất</button>
@@ -342,7 +347,7 @@ function setTuyenList(list){
     if (!key || map[key]) return;
     const kn = KNOWN[key] || {};
     const fid = o.thu_muc_id || o.folder_id || "";
-    const link = o.link_thu_muc || o.thu_muc_url || o.folder_url || o.link || (typeof o.thu_muc === "string" && /^https?:/.test(o.thu_muc) ? o.thu_muc : "") || (fid ? DRIVE(fid) : "");
+    const link = o.link_thu_muc || o.thu_muc_url || o.folder_url || o.link || (typeof o.thu_muc === "string" ? (/^https?:/.test(o.thu_muc) ? o.thu_muc : (/^[\w-]{20,}$/.test(o.thu_muc) ? DRIVE(o.thu_muc) : "")) : "") || (fid ? DRIVE(fid) : "");
     const kv = asArr(o.kenh_video || o.kenh_mac_dinh || o.kenh);
     map[key] = {ten: o.ten || o.name || o.ten_tuyen || kn.ten || key, thu_muc: link || kn.thu_muc || "", kenh_video: kv.length ? kv : (kn.kenh_video || []), kenh_anh: asArr(o.kenh_anh)};
     order.push(key);
@@ -351,6 +356,20 @@ function setTuyenList(list){
 }
 setTuyenList(Object.keys(KNOWN).map(k => Object.assign({ma:k}, KNOWN[k])));
 const tName = k => (TUYEN[k] && TUYEN[k].ten) || k || "";
+/* Người: chuỗi tên/email hoặc {ten, email} */
+const personName = v => !v ? "" : typeof v === "string" ? v.replace(/@.*$/, "") : (v.ten || v.name || (v.email || "").replace(/@.*$/, ""));
+const personMail = v => !v || typeof v === "string" ? (typeof v === "string" && v.includes("@") ? v : "") : (v.email || "");
+const initials = n => String(n || "?").trim().split(/\s+/).slice(-1)[0].charAt(0).toUpperCase() || "?";
+function ownerOf(it){
+  const d = S.det[it.ma] || {};
+  return it.nguoi_quan_ly || it.quan_ly || it.nguoi_tai_len || it.owner || d.nguoi_quan_ly || d.quan_ly || d.nguoi_tai_len || d.owner || "";
+}
+function ownerHtml(it, label){
+  const o = ownerOf(it); const n = personName(o);
+  if (!n) return "";
+  const m = personMail(o);
+  return '<span class="owner" title="'+esc(m || n)+'"><span class="av" aria-hidden="true">'+esc(initials(n))+'</span>'+esc(label || "Quản lý")+': <b>'+esc(n)+'</b></span>';
+}
 const PHOTO_PAGES = ["FB: Bác Sĩ Nha Khoa My Auris","FB: Nha Khoa My Auris","FB: My Auris"];
 const FALLBACK_CHANNELS = ["FB: My Auris","FB: Nha Khoa My Auris","FB: Bác Sĩ Nha Khoa My Auris","FB: Nha khoa My Auris - Chuyên Răng Sứ Thẩm Mỹ","FB: Hồ Sơ Nụ Cười My Auris","FB: Auris - Nơi nụ cười bắt đầu từ bên trong","Instagram: my_auris","TikTok: Bác sĩ Nha Khoa My Auris"];
 
@@ -488,9 +507,9 @@ async function load(){
   } else notice.innerHTML = "";
 
   if (res.ds) setTuyenList(res.ds.tuyen || res.ds.ds_tuyen || res.ds.danh_sach || res.ds.data || res.ds.items);
-  const who = (res.tq && (res.tq.nguoi_dung || res.tq.nguoi || res.tq.ten_nguoi_dung)) || (res.ds && (res.ds.nguoi_dung || res.ds.nguoi));
-  if (who){ S.user = typeof who === "object" ? (who.ten || who.name || "") : String(who); setName(S.user); }
-  $("#who").textContent = getName() ? "Đang dùng: " + getName() : "";
+  const who = (res.tq && (res.tq.nguoi_dung || res.tq.nguoi || res.tq.ten_nguoi_dung || res.tq.toi)) || (res.ds && (res.ds.nguoi_dung || res.ds.nguoi));
+  if (who){ S.user = personName(who); S.userMail = personMail(who); setName(S.user); }
+  $("#who").innerHTML = getName() ? '<span class="me" title="'+esc(S.userMail || "")+'"><span class="av" aria-hidden="true">'+esc(initials(getName()))+'</span>Đang đăng nhập: '+esc(getName())+'</span>' : '<span class="stamp">Chưa có tên người dùng từ hệ thống</span>';
   if (res.tq){
     const t = res.tq;
     S.mode = t.mode || "";
@@ -636,7 +655,7 @@ function renderKho(){
       h += '<article class="lrow'+(sel?" selected":"")+'" data-ma="'+esc(it.ma)+'">'+
         '<label class="pick"><input type="checkbox" data-act="sel" id="sel-'+esc(it.ma)+'" '+(sel?"checked":"")+' aria-label="Chọn bài"></label>'+
         thumbHtml(it, {badge:false})+
-        '<div><h3>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</h3><div class="meta"><span class="tag">'+esc(loaiLabel(it.loai))+'</span>'+tuyenTag(it)+'<span>→ '+(ch.length ? esc(ch.map(chanShort).join(" · ")) : "chọn kênh khi lên lịch")+'</span></div></div>'+
+        '<div><h3>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</h3><div class="meta"><span class="tag">'+esc(loaiLabel(it.loai))+'</span>'+tuyenTag(it)+'<span>→ '+(ch.length ? esc(ch.map(chanShort).join(" · ")) : "chọn kênh khi lên lịch")+'</span>'+ownerHtml(it)+'</div></div>'+
         '<div class="acts"><button type="button" class="btn small primary" data-act="one">Lên lịch</button><button type="button" class="btn small" data-act="cap">Caption</button><button type="button" class="btn small danger" data-act="skip">Bỏ</button></div>'+
       '</article>';
     });
@@ -651,7 +670,7 @@ function renderKho(){
       '<div class="body"><div class="card-top">'+tuyenTag(it)+'</div>'+
       '<h3>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</h3>'+
       '<p class="cap">'+esc(it.caption_ngan || "")+'</p>'+
-      '<p class="dest">Đăng lên: <b>'+(ch.length ? esc(ch.map(chanShort).join(" · ")) : "chọn kênh khi lên lịch")+'</b></p></div>'+
+      '<p class="dest">Đăng lên: <b>'+(ch.length ? esc(ch.map(chanShort).join(" · ")) : "chọn kênh khi lên lịch")+'</b></p>'+ownerHtml(it)+'</div>'+
       '<div class="card-actions">'+
         '<button type="button" class="btn small primary" data-act="one">Lên lịch</button>'+
         '<button type="button" class="btn small" data-act="cap">Caption</button>'+
@@ -676,7 +695,7 @@ function renderWeek(){
   if (!kho.length) h += '<p class="stamp" style="margin:0">Kho trống.</p>';
   kho.forEach(it => {
     h += '<div class="wk-item" data-ma="'+esc(it.ma)+'">'+thumbHtml(it, {badge:false})+
-      '<div style="min-width:0"><b>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</b><small>'+esc(loaiLabel(it.loai))+' · '+esc(tName(tuyenOf(it)) || "Chưa rõ tuyến")+'</small>'+
+      '<div style="min-width:0"><b>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</b><small>'+esc(loaiLabel(it.loai))+' · '+esc(tName(tuyenOf(it)) || "Chưa rõ tuyến")+(personName(ownerOf(it))?' · '+esc(personName(ownerOf(it))):'')+'</small>'+
       '<div style="display:flex;gap:6px;margin-top:6px"><button type="button" class="btn small primary" data-act="one">Lên lịch</button><button type="button" class="btn small" data-act="cap">Caption</button></div></div></div>';
   });
   h += '</aside><section class="wk-main"><div class="wk-head"><h3>'+pad(st.getDate())+'/'+pad(st.getMonth()+1)+' – '+pad(end.getDate())+'/'+pad(end.getMonth()+1)+'/'+end.getFullYear()+'</h3>'+
@@ -726,7 +745,7 @@ function renderLich(){
     const sending = /đang gửi/i.test(it.trang_thai||"");
     const editing = S.editRow === it.ma;
     return '<div class="row" data-ma="'+esc(it.ma)+'">'+ whenCell(it) +
-      '<div class="main"><h3>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</h3><div class="meta"><span class="tag">'+esc(chanShort(it.kenh||""))+'</span>'+tuyenTag(it)+'<span class="status '+statusClass(it.trang_thai)+'">'+esc(it.trang_thai)+'</span><span>'+esc(it.ten)+'</span></div></div>'+
+      '<div class="main"><h3>'+esc(cleanTitle(it.tieu_de) || it.ten)+'</h3><div class="meta"><span class="tag">'+esc(chanShort(it.kenh||""))+'</span>'+tuyenTag(it)+'<span class="status '+statusClass(it.trang_thai)+'">'+esc(it.trang_thai)+'</span><span>'+esc(it.ten)+'</span>'+ownerHtml(it)+(personName(it.nguoi_len_lich)?ownerHtml({nguoi_quan_ly:it.nguoi_len_lich,ma:"_"}, "Lên lịch"):'')+'</div></div>'+
       '<div class="acts">'+
         '<button type="button" class="btn small" data-act="move" '+(sending?"disabled":"")+'>Dời giờ</button>'+
         '<button type="button" class="btn small" data-act="cap">Caption</button>'+
