@@ -69,6 +69,13 @@ Web tĩnh (GitHub Pages) gọi **một** webhook trên n8n.myauris.vn. Webhook c
    Web hiện "Quản lý: Lan" trên thẻ bài, danh sách và lịch tuần.
 3. (Tuỳ chọn) Dòng kênh đã lên lịch: `"nguoi_len_lich": "Tên"` — web hiện "Lên lịch: Tên" ở tab Sắp đăng.
 
+## Album: thứ tự ảnh & xem trước bố cục
+
+- Web đánh số tên file theo thứ tự người dùng sắp (`01_…`, `02_…`) khi gọi `tao_link_tai_len`, nên album trên Drive xếp đúng thứ tự khi đăng (hệ thống đang xếp theo tên file).
+- (Tuỳ chọn, để mọi máy đều xem trước được bố cục) — `danh_sach_bai` xem theo mã trả thêm cho album:
+  `"anh": ["<fileId1>", "<fileId2>", …]` theo đúng thứ tự đăng (hoặc `[{ "id": "…", "w": 1080, "h": 1350 }]` nếu có kích thước).
+  Không có trường này thì web chỉ xem trước được trên máy đã tải album lên.
+
 ## Chi phí
 
 n8n tự cài trên máy chủ công ty: không giới hạn lượt chạy, không phát sinh phí.
