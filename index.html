@@ -790,7 +790,7 @@ function drawUpload(){
       '<div class="pbar"><i style="width:'+(f.st==="ok"?100:(f.pct||0))+'%"></i></div></div>').join("") + '</div>';
   }
   if (c.done) h += '<div class="notice" style="margin:0;background:var(--ok-soft);border-color:transparent"><b>Đã tải lên '+c.files.length+' file.</b> AI đang xem nội dung và viết caption theo prompt của tuyến '+esc(tName(c.tuyen))+'. Khoảng 2–5 phút nữa bài hiện trong Kho bài.</div>';
-  else h += '<p style="margin:0;font-size:12.5px;color:var(--muted)">Video lớn có thể mất vài phút, giữ trang mở đến khi tải xong. '+(c.tuyen && TUYEN[c.tuyen] && TUYEN[c.tuyen].thu_muc ?'Hoặc <a href="'+esc(TUYEN[c.tuyen].thu_muc)+'" target="_blank" rel="noopener">mở thư mục Drive của tuyến</a> để tải thẳng.':'')+'</p>';
+  else h += '<p style="margin:0;font-size:12.5px;color:var(--muted)">File tự vào đúng thư mục của tuyến đã chọn, bạn không cần mở Drive. Video lớn có thể mất vài phút, giữ trang mở đến khi tải xong.</p>';
   h += '</div><div class="modal-foot"><span></span><div style="display:flex;gap:8px">'+
     (c.done ? '<button type="button" class="btn primary" data-act="updone">Xong</button>' :
     '<button type="button" class="btn" data-act="close" '+(c.running?"disabled":"")+'>Thôi</button><button type="button" class="btn primary" data-act="upgo" '+(c.running||!c.files.length?"disabled":"")+'>'+(c.running?'<span class="spin"></span> Đang tải lên…':'Tải lên '+c.files.filter(f=>f.st!=="ok").length+' file')+'</button>')+
