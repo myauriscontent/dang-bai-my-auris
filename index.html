@@ -263,6 +263,41 @@ textarea{width:100%;resize:vertical;line-height:1.5}
 .pvnote{font-size:12px;color:var(--muted);margin:6px 0 0}
 @media (max-width:700px){ .albumwrap{grid-template-columns:minmax(0,1fr)} }
 
+/* Lịch đăng trong cửa sổ tải lên */
+.schbox{border:2px solid var(--accent);border-radius:20px;padding:16px;display:grid;gap:12px}
+.schhead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.schhead h3{font-size:16px;display:flex;align-items:center;gap:8px;color:var(--ink)}
+.schhead h3 svg{color:var(--accent)}
+.schmode{display:inline-flex;background:var(--bg);border-radius:999px;padding:4px;gap:2px}
+.schmode button{border:0;border-radius:999px;padding:0 14px;min-height:36px;cursor:pointer;font-size:13.5px}
+.schplans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.schplan{text-align:left;border-radius:14px;padding:10px 12px;cursor:pointer;min-height:60px;background:var(--surface);border:2px solid var(--line);color:var(--ink)}
+.schplan b{display:block;font-size:14px;font-weight:600}
+.schplan span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.schplan[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-deep)}
+.schctl{display:flex;flex-wrap:wrap;gap:12px 14px;align-items:flex-end;background:var(--bg);border-radius:16px;padding:12px 14px}
+.schctl input{background:var(--surface)}
+.stepper{display:inline-flex;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.stepper button{border:0;background:none;width:34px;height:38px;font-size:18px;cursor:pointer;color:var(--accent)}
+.stepper button:disabled{opacity:.35;cursor:default}
+.stepper span{min-width:62px;text-align:center;font-size:14px;color:var(--ink)}
+.quickt{display:flex;gap:6px;flex-wrap:wrap}
+.quickt button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:0 12px;min-height:38px;cursor:pointer;font-size:13px}
+.quickt button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.schrows{display:grid;gap:6px}
+.schrow{display:grid;grid-template-columns:48px minmax(0,1fr) 140px 100px;gap:10px;align-items:center;background:var(--bg);border-radius:14px;padding:6px 10px 6px 6px}
+.sthumb{width:48px;height:48px;border-radius:10px;overflow:hidden;background:var(--tint-bacsi);display:flex;align-items:center;justify-content:center;color:var(--accent-deep)}
+.sthumb img{width:100%;height:100%;object-fit:cover}
+.sthumb .ph{width:22px;height:22px}
+.sname{min-width:0;display:grid}
+.sname b{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sname small{font-size:12px;color:var(--muted)}
+.sday{font-size:13.5px;font-weight:500}
+.schrow input{background:var(--surface);font-size:13px;padding:7px 8px}
+.schsum{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;background:var(--accent-soft);color:var(--accent-deep);border-radius:14px;padding:10px 14px;font-size:13.5px}
+.schsum b{font-weight:600;color:var(--ink)}
+@media (max-width:700px){ .schplans{grid-template-columns:minmax(0,1fr)} .schrow{grid-template-columns:48px minmax(0,1fr)} .schrow .sday,.schrow input{grid-column:2} }
+
 /* Thanh hành động */
 .actionbar{position:fixed;left:50%;bottom:18px;transform:translate(-50%,160%);transition:transform .18s ease;z-index:20;background:var(--ink);color:var(--bg);border-radius:999px;box-shadow:0 12px 40px rgba(20,10,40,.25);width:min(720px,calc(100% - 32px))}
 .actionbar.show{transform:translate(-50%,0)}
@@ -1024,7 +1059,7 @@ async function act(tool, input, okMsg){
 /* ---------- Upload ---------- */
 const mb = n => (n/1048576).toFixed(n < 10485760 ? 1 : 0) + " MB";
 function openUpload(){
-  modalCtx = {type:"up", tuyen: TUYEN[S.tuyen] ? S.tuyen : "", mode:"le", album:"", files:[], running:false, done:false, chans:null, chansTouched:false};
+  modalCtx = {type:"up", tuyen: TUYEN[S.tuyen] ? S.tuyen : "", mode:"le", album:"", files:[], running:false, done:false, chans:null, chansTouched:false, sch:schInit()};
   drawUpload();
 }
 function upDefaultChans(c){
@@ -1067,11 +1102,13 @@ function drawUpload(){
       (f.st === "ok" ? '<small style="color:var(--ok)">Đã tải lên</small>' : f.st === "err" ? '<small style="color:var(--bad)">'+esc(f.msg)+'</small>' : f.st === "run" ? '<small class="pct">'+(f.pct||0)+'%</small>' : (c.running ? '<small>Chờ…</small>' : '<button type="button" class="btn small" data-act="uprm" data-v="'+i+'">Bỏ</button>'))+
       '<div class="pbar"><i style="width:'+(f.st==="ok"?100:(f.pct||0))+'%"></i></div></div>').join("") + '</div>';
   }
+  if (c.files.length || c.done) h += schPanel(c);
+  if (c.done && c.sch.mode === "lich") h += schAckNote(c);
   if (c.done) h += '<div class="notice" style="margin:0;background:var(--ok-soft);border-color:transparent"><b>Đã tải lên '+c.files.length+' file.</b> AI đang xem nội dung và viết caption theo prompt của tuyến '+esc(tName(c.tuyen))+'. Khoảng 2–5 phút nữa bài hiện trong Kho bài.</div>';
   else h += '<p style="margin:0;font-size:12.5px;color:var(--muted)">File tự vào đúng thư mục của tuyến đã chọn, bạn không cần mở Drive. Video lớn có thể mất vài phút, giữ trang mở đến khi tải xong.</p>';
   h += '</div><div class="modal-foot"><span></span><div style="display:flex;gap:8px">'+
     (c.done ? '<button type="button" class="btn primary" data-act="updone">Xong</button>' :
-    '<button type="button" class="btn" data-act="close" '+(c.running?"disabled":"")+'>Thôi</button><button type="button" class="btn primary" data-act="upgo" '+(c.running||!c.files.length?"disabled":"")+'>'+(c.running?'<span class="spin"></span> Đang tải lên…':'Tải lên '+c.files.filter(f=>f.st!=="ok").length+' file')+'</button>')+
+    '<button type="button" class="btn" data-act="close" '+(c.running?"disabled":"")+'>Thôi</button><button type="button" class="btn primary" data-act="upgo" '+(c.running||!c.files.length?"disabled":"")+'>'+(c.running?'<span class="spin"></span> Đang tải lên…':(c.sch.mode === "lich" ? 'Tải lên & lên lịch ' : 'Tải lên ')+c.files.filter(f=>f.st!=="ok").length+' file')+'</button>')+
     '</div></div>';
   modal.className = "modal narrow"; modal.style.width = "min(640px,100%)"; modal.innerHTML = h; ov.classList.add("show");
   const inp = $("#up-file"), drop = $("#up-drop");
@@ -1135,6 +1172,98 @@ function moveFile(from, to){
   const [x] = c.files.splice(from, 1); c.files.splice(to, 0, x); drawUpload();
 }
 
+/* ---------- Lịch đăng ngay khi tải lên (hệ thống tự hẹn giờ) ---------- */
+const DOW_VN = ["CN","T2","T3","T4","T5","T6","T7"];
+function schInit(){
+  let mode = "lich"; try { mode = localStorage.getItem("mya_sch_mode") || "lich"; } catch(_){ }
+  return {mode, plan:"spread", start:nextDefaultDate(), time:"19:00", gap:1, each:{}};
+}
+function addDays(iso, n){ const d = new Date(iso + "T00:00"); d.setDate(d.getDate() + n); return isoDate(d); }
+function dayLabel(iso){ const d = new Date(iso + "T00:00"); return DOW_VN[d.getDay()] + ", " + pad(d.getDate()) + "/" + pad(d.getMonth()+1); }
+/* Các "bài" sẽ lên lịch, theo nguồn: file trên máy hoặc link Drive */
+function schItems(c){
+  if (c.src === "link"){
+    const L = parseDriveLinks(c.linkText).filter(l => l.kind !== "bad");
+    if (c.mode === "album") return L.length ? [{key:"album", name: c.album || "Bài nhiều ảnh (" + L.length + " link)", sub:"Nhiều ảnh"}] : [];
+    return L.map((l, i) => ({key:"l"+i, name: l.kind === "folder" ? "Thư mục " + (i+1) : "File " + (i+1), sub: l.kind === "folder" ? "Nhiều bài: rải tiếp theo thứ tự tên file" : "Link file", folder: l.kind === "folder"}));
+  }
+  if (c.mode === "album") return c.files.length ? [{key:"album", name: c.album || "Bài nhiều ảnh", sub: c.files.length + " ảnh", thumb: (c.files[0] || {}).url}] : [];
+  return c.files.map((f, i) => ({key:"f"+i, name: f.file.name, sub: mb(f.file.size) + " · " + (/^video\//.test(f.file.type) ? "Video" : "Ảnh"), thumb: f.url}));
+}
+function schSlot(c, i, key){
+  const s = c.sch;
+  if (s.plan === "each" && s.each[key]) return s.each[key];
+  const date = s.plan === "same" ? s.start : s.plan === "spread" ? addDays(s.start, i * s.gap) : addDays(s.start, i);
+  return {date, time: s.time};
+}
+function schLich(c, slot){ return c.chans.map(ch => chanSend(ch) + " | " + toDMY(slot.date) + " | " + slot.time).join("; "); }
+function schPanel(c){
+  const s = c.sch, items = schItems(c), lock = c.running || c.done;
+  const pill = (on) => on ? 'background:var(--accent);color:var(--accent-ink);font-weight:500' : 'background:none;color:var(--muted)';
+  let h = '<section class="schbox"><div class="schhead"><h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Lịch đăng</h3>'+
+    '<div class="schmode" role="group" aria-label="Lịch đăng">'+
+      [["kho","Để trong kho, lên lịch sau"],["lich","Lên lịch luôn"]].map(([k,l]) => '<button type="button" data-act="schm" data-v="'+k+'" aria-pressed="'+(s.mode===k)+'" style="'+pill(s.mode===k)+'" '+(lock?"disabled":"")+'>'+l+'</button>').join("")+
+    '</div></div>';
+  if (s.mode !== "lich"){
+    return h + '<p class="pvnote" style="margin:0">Bài vào Kho bài kèm caption AI. Bạn lên lịch sau ở tab Kho bài như hiện nay.</p></section>';
+  }
+  const single = items.length <= 1 && !(items[0] && items[0].folder);
+  const plans = single ? [] : [["same","Cùng ngày giờ","Tất cả đăng một lúc"],["spread","Mỗi ngày 1 bài","Rải đều, cùng một giờ"],["each","Mỗi bài một lịch","Tự chọn ngày giờ từng bài"]];
+  if (plans.length) h += '<div class="schplans">' + plans.map(([k,l,d]) => '<button type="button" class="schplan" data-act="schp" data-v="'+k+'" aria-pressed="'+(s.plan===k)+'" '+(lock?"disabled":"")+'><b>'+l+'</b><span>'+d+'</span></button>').join("") + '</div>';
+  const isSpread = !single && s.plan === "spread";
+  h += '<div class="schctl">'+
+    '<label class="field">'+(single ? "Ngày đăng" : s.plan === "spread" ? "Bắt đầu từ ngày" : s.plan === "same" ? "Ngày đăng" : "Ngày bắt đầu gợi ý")+'<input type="date" id="sch-start" value="'+s.start+'" '+(lock?"disabled":"")+'></label>'+
+    '<label class="field">Giờ đăng<input type="time" id="sch-time" value="'+s.time+'" '+(lock?"disabled":"")+'></label>'+
+    (isSpread ? '<div class="field">Cách nhau<div class="stepper"><button type="button" data-act="schg" data-v="-1" aria-label="Bớt 1 ngày" '+(lock||s.gap<=1?"disabled":"")+'>−</button><span>'+s.gap+' ngày</span><button type="button" data-act="schg" data-v="1" aria-label="Thêm 1 ngày" '+(lock||s.gap>=14?"disabled":"")+'>+</button></div></div>' : '')+
+    '<div class="field">Giờ hay dùng<div class="quickt">'+["08:00","12:00","17:00","19:00","20:30"].map(t => '<button type="button" data-act="scht" data-v="'+t+'" aria-pressed="'+(s.time===t)+'" '+(lock?"disabled":"")+'>'+t+'</button>').join("")+'</div></div>'+
+  '</div>';
+  if (items.length){
+    const each = !single && s.plan === "each";
+    h += '<div class="schrows">';
+    items.forEach((it, i) => {
+      const sl = schSlot(c, i, it.key);
+      h += '<div class="schrow"><div class="sthumb">'+(it.thumb ? '<img src="'+esc(it.thumb)+'" alt="">' : PH_VIDEO)+'</div>'+
+        '<div class="sname"><b>'+esc(it.name)+'</b><small>'+esc(it.sub)+'</small></div>'+
+        (each ? '<input type="date" data-sch-k="'+esc(it.key)+'" data-sch-f="date" value="'+sl.date+'" aria-label="Ngày đăng" '+(lock?"disabled":"")+'><input type="time" data-sch-k="'+esc(it.key)+'" data-sch-f="time" value="'+sl.time+'" aria-label="Giờ đăng" '+(lock?"disabled":"")+'>'
+              : '<span class="sday">'+dayLabel(sl.date)+'</span><span class="sday">'+sl.time+'</span>')+
+      '</div>';
+    });
+    h += '</div>';
+    const first = schSlot(c, 0, items[0].key), last = schSlot(c, items.length - 1, items[items.length-1].key);
+    const posts = items.length, nCh = c.chans.length;
+    const sum = single ? "1 bài · " + dayLabel(first.date) + " · " + first.time
+      : s.plan === "same" ? posts + " bài · cùng lúc " + dayLabel(first.date) + " · " + s.time
+      : s.plan === "spread" ? posts + " bài · " + dayLabel(first.date) + " → " + dayLabel(last.date) + " · " + s.time + (s.gap > 1 ? ", cách " + s.gap + " ngày" : " mỗi ngày")
+      : posts + " bài · mỗi bài một lịch riêng";
+    h += '<div class="schsum"><b>'+esc(sum)+'</b><span>'+(nCh ? posts + " bài × " + nCh + " kênh = " + (posts*nCh) + " lượt đăng" : "Chưa chọn kênh nào ở trên")+'</span></div>';
+  }
+  h += '<p class="pvnote" style="margin:0">AI viết caption xong (khoảng 2–5 phút) là hệ thống tự hẹn giờ, bạn không cần để trang mở. Trước giờ đăng vẫn xem và sửa caption được ở tab Sắp đăng.</p>';
+  return h + '</section>';
+}
+/* Kiểm tra trước khi gửi; trả về thông báo lỗi hoặc "" */
+function schAckNote(c){
+  return c.schAck ? '<div class="notice" style="margin:0;background:var(--accent-soft)"><b>Hệ thống đã nhận lịch đăng.</b> Bài sẽ tự vào tab Sắp đăng khi AI viết caption xong.</div>'
+    : '<div class="notice warn" style="margin:0"><b>Hệ thống chưa nhận lịch đăng</b> (anh Duy chưa bật chức năng tự hẹn giờ). Bài vẫn vào Kho bài, bạn lên lịch tay ở tab Kho bài.</div>';
+}
+function schCheck(c){
+  if (c.sch.mode !== "lich") return "";
+  if (!c.chans.length) return "Chọn ít nhất 1 kênh để lên lịch.";
+  const items = schItems(c); const min = Date.now() + 20 * 60000;
+  for (let i = 0; i < items.length; i++){
+    const sl = schSlot(c, i, items[i].key);
+    if (!sl.date || !sl.time) return "Thiếu ngày hoặc giờ đăng.";
+    if (new Date(sl.date + "T" + sl.time).getTime() < min) return "Giờ đăng phải sau bây giờ ít nhất 20 phút (" + items[i].name + ").";
+  }
+  return "";
+}
+function schPayload(c, i, key, isFolder){
+  if (c.sch.mode !== "lich") return {};
+  const sl = schSlot(c, i, key);
+  const out = {hen_gio:true, lich: schLich(c, sl), ngay: toDMY(sl.date), gio: sl.time};
+  if (isFolder) out.lich_mau = {kieu: c.sch.plan === "same" ? "cung_luc" : "moi_ngay", bat_dau: toDMY(sl.date), gio: sl.time, cach_ngay: c.sch.plan === "spread" ? c.sch.gap : 1};
+  return out;
+}
+
 /* ---------- Nhập từ link Google Drive ---------- */
 function parseDriveLinks(txt){
   return String(txt || "").split(/[\s,;]+/).map(s => s.trim()).filter(Boolean).map(u => {
@@ -1158,7 +1287,7 @@ function linkListHtml(c){
 }
 function linkGoLabel(c){
   const n = parseDriveLinks(c.linkText).filter(l => l.kind !== "bad").length;
-  return c.running ? '<span class="spin"></span> Đang nhập…' : 'Nhập ' + n + ' link';
+  return c.running ? '<span class="spin"></span> Đang nhập…' : (c.sch && c.sch.mode === "lich" ? 'Nhập & lên lịch ' : 'Nhập ') + n + ' link';
 }
 function drawLinkUpload(h){
   const c = modalCtx;
@@ -1170,6 +1299,8 @@ function drawLinkUpload(h){
       : 'Mỗi link file thành 1 bài. Link thư mục thì mỗi video/ảnh bên trong thành 1 bài.')+
     ' Link cần mở được bằng tài khoản công ty (chia sẻ trong My Auris, hoặc "bất kỳ ai có link"). Hệ thống sao chép file vào thư mục tuyến, file gốc giữ nguyên.</p>';
   h += '<div id="lk-list">' + linkListHtml(c) + '</div>';
+  h += '<div id="lk-sch">' + schPanel(c) + '</div>';
+  if (c.done && c.sch.mode === "lich") h += schAckNote(c);
   if (c.done) h += '<div class="notice" style="margin:0;background:var(--ok-soft)"><b>Đã nhập xong.</b> AI đang xem nội dung và viết caption theo prompt của tuyến '+esc(tName(c.tuyen))+'. Khoảng 2–5 phút nữa bài hiện trong Kho bài.</div>';
   h += '</div><div class="modal-foot"><span></span><div style="display:flex;gap:8px">'+
     (c.done ? '<button type="button" class="btn primary" data-act="updone">Xong</button>' :
@@ -1180,6 +1311,7 @@ function drawLinkUpload(h){
   if (ta) ta.oninput = () => {
     c.linkText = ta.value; c.linkRes = [];
     $("#lk-list").innerHTML = linkListHtml(c);
+    $("#lk-sch").innerHTML = schPanel(c);
     const b = $("#lk-go"); if (b){ b.innerHTML = linkGoLabel(c); b.disabled = !parseDriveLinks(c.linkText).some(l => l.kind !== "bad"); }
   };
   const al = $("#up-album"); if (al) al.oninput = () => { c.album = al.value; };
@@ -1206,21 +1338,26 @@ async function runLinkImport(){
     if (folders.length > 1 || (folders.length && files.length)){ toast("Bài nhiều ảnh: dán 1 link thư mục, hoặc nhiều link file ảnh."); return; }
     if (files.length === 1){ toast("Bài nhiều ảnh cần ít nhất 2 ảnh. Dán thêm link, hoặc chọn “Mỗi file là 1 bài”."); return; }
     if (files.length > 1 && !c.album.trim()){ toast("Đặt tên cho bài nhiều ảnh."); return; }
+    { const se = schCheck(c); if (se){ toast(se); return; } }
     c.running = true;
     all.forEach((l, i) => { if (l.kind !== "bad") c.linkRes[i] = {st:"run"}; });
     drawUpload();
     try {
-      const p = await call("nhap_tu_drive", {tuyen:c.tuyen, che_do:"album", links:L.map(l => l.url), ids:L.map(l => l.id), loai: folders.length ? "folder" : "file", album:c.album.trim(), kenh});
+      const p = await call("nhap_tu_drive", {tuyen:c.tuyen, che_do:"album", links:L.map(l => l.url), ids:L.map(l => l.id), loai: folders.length ? "folder" : "file", album:c.album.trim(), kenh, ...schPayload(c, 0, "album", folders.length > 0)});
+      if (c.sch.mode === "lich") c.schAck = !!(p.hen_gio || p.da_nhan_lich);
       rememberChans(c, p); if (c.album.trim()) rememberChans(c, {ten:c.album.trim()});
       all.forEach((l, i) => { if (l.kind !== "bad") c.linkRes[i] = {st:"ok", msg: p.thong_bao || ("Đã nhận" + (p.so_file ? " " + p.so_file + " ảnh" : ""))}; });
     } catch(e){ all.forEach((l, i) => { if (l.kind !== "bad") c.linkRes[i] = {st:"err", msg: linkErr(e)}; }); }
   } else {
+    { const se = schCheck(c); if (se){ toast(se); return; } }
     c.running = true; drawUpload();
+    let k = -1;
     for (let i = 0; i < all.length; i++){
       const l = all[i]; if (l.kind === "bad") continue;
-      c.linkRes[i] = {st:"run"}; drawUpload();
+      c.linkRes[i] = {st:"run"}; drawUpload(); k++;
       try {
-        const p = await call("nhap_tu_drive", {tuyen:c.tuyen, che_do:"le", link:l.url, id:l.id, loai:l.kind, kenh});
+        const p = await call("nhap_tu_drive", {tuyen:c.tuyen, che_do:"le", link:l.url, id:l.id, loai:l.kind, kenh, ...schPayload(c, k, "l"+k, l.kind === "folder")});
+        if (c.sch.mode === "lich") c.schAck = (c.schAck === false) ? false : !!(p.hen_gio || p.da_nhan_lich);
         rememberChans(c, p);
         c.linkRes[i] = {st:"ok", msg: p.thong_bao || ("Đã nhận" + (p.so_file ? " " + p.so_file + " file" : ""))};
       } catch(e){ c.linkRes[i] = {st:"err", msg: linkErr(e)}; }
@@ -1269,12 +1406,15 @@ async function runUpload(){
     if (c.files.length < 2 || c.files.length > 10){ toast("Bài nhiều ảnh cần từ 2 đến 10 ảnh."); return; }
     c.files.forEach((f, i) => { f.sendName = String(i + 1).padStart(2, "0") + "_" + f.file.name.replace(/^\d{1,3}[_\-. ]+/, ""); });
   }
+  const se = schCheck(c); if (se){ toast(se); return; }
+  c.schAck = null;
   c.running = true; drawUpload();
   for (let i = 0; i < c.files.length; i++){
     const f = c.files[i]; if (f.st === "ok") continue;
     f.st = "run"; f.pct = 0; drawUpload();
     try {
-      const p = await call("tao_link_tai_len", {tuyen:c.tuyen, ten_file:f.sendName || f.file.name, mime:f.file.type || "application/octet-stream", kich_thuoc:String(f.file.size), album: c.mode === "album" ? c.album.trim() : "", kenh: c.chans.map(chanSend).join("; ")});
+      const p = await call("tao_link_tai_len", {tuyen:c.tuyen, ten_file:f.sendName || f.file.name, mime:f.file.type || "application/octet-stream", kich_thuoc:String(f.file.size), album: c.mode === "album" ? c.album.trim() : "", kenh: c.chans.map(chanSend).join("; "), ...schPayload(c, c.mode === "album" ? 0 : i, c.mode === "album" ? "album" : "f"+i, false)});
+      if (c.sch.mode === "lich") c.schAck = (c.schAck === false) ? false : !!(p.hen_gio || p.da_nhan_lich);
       if (!p.upload_url) throw new Error("API chưa trả về link tải lên.");
       await putFile(p.upload_url, f.file, pct => {
         f.pct = pct;
@@ -1419,6 +1559,10 @@ document.addEventListener("click", async ev => {
     case "upl": moveFile(+t.dataset.v, +t.dataset.v - 1); break;
     case "upr": moveFile(+t.dataset.v, +t.dataset.v + 1); break;
     case "upgo": runUpload(); break;
+    case "schm": if (!modalCtx.running){ modalCtx.sch.mode = t.dataset.v; try { localStorage.setItem("mya_sch_mode", t.dataset.v); } catch(_){ } drawUpload(); } break;
+    case "schp": if (!modalCtx.running){ const s = modalCtx.sch; if (t.dataset.v === "each"){ const its = schItems(modalCtx); its.forEach((it, i) => { if (!s.each[it.key]) s.each[it.key] = schSlot(modalCtx, i, it.key); }); } s.plan = t.dataset.v; drawUpload(); } break;
+    case "scht": if (!modalCtx.running){ modalCtx.sch.time = t.dataset.v; drawUpload(); } break;
+    case "schg": if (!modalCtx.running){ const s = modalCtx.sch; s.gap = Math.max(1, Math.min(14, s.gap + (+t.dataset.v))); drawUpload(); } break;
     case "upsrc": if (!modalCtx.running){ modalCtx.src = t.dataset.v; drawUpload(); } break;
     case "lkgo": runLinkImport(); break;
     case "newtuyen": openNewTuyen(); break;
@@ -1445,6 +1589,12 @@ document.addEventListener("click", async ev => {
 });
 document.addEventListener("change", ev => {
   if (ev.target.id === "kenhSel"){ S.kenh = ev.target.value; render(); return; }
+  if (modalCtx && modalCtx.type === "up" && modal.contains(ev.target)){
+    const c = modalCtx, t0 = ev.target;
+    if (t0.id === "sch-start"){ c.sch.start = t0.value; if (c.sch.plan !== "each") c.sch.each = {}; drawUpload(); return; }
+    if (t0.id === "sch-time"){ c.sch.time = t0.value; drawUpload(); return; }
+    if (t0.dataset.schK){ const k = t0.dataset.schK; c.sch.each[k] = Object.assign({}, c.sch.each[k] || {date:c.sch.start, time:c.sch.time}, {[t0.dataset.schF]: t0.value}); drawUpload(); return; }
+  }
   const t = ev.target;
   if (!modalCtx || modalCtx.type !== "sched" || !modal.contains(t)) return;
   const c = modalCtx;

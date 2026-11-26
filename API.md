@@ -101,6 +101,17 @@ Web cho dán link file hoặc thư mục Drive thay cho kéo thả. Hệ thống
 Trên web, "album" giờ gọi là **bài nhiều ảnh**: 2–10 ảnh đăng chung **một bài viết** trên trang (kiểu ảnh lớn + ảnh nhỏ), **không tạo Album ảnh** trên Facebook. Trong API vẫn giữ tên trường `album` / `che_do: "album"` / `loai: "album"` để không phải đổi gì.
 Nhờ kiểm tra: khi gửi sang Upload-Post, thư mục nhiều ảnh được đăng thành **1 bài viết nhiều ảnh** trên Facebook (và carousel trên Instagram), không phải tạo album mới trên page.
 
+## Tự hẹn giờ ngay khi tải lên (việc 10)
+
+Trong cửa sổ Tải bài lên, người dùng chọn **"Lên lịch luôn"** và ngày giờ cho từng bài. Web gửi kèm trong `tao_link_tai_len` (mỗi file) và `nhap_tu_drive` (mỗi link):
+
+- `hen_gio: true`, `lich: "My Auris | 27/11/2026 | 19:00; Nha Khoa My Auris | 27/11/2026 | 19:00"` (đúng định dạng của `len_lich`), `ngay: "27/11/2026"`, `gio: "19:00"`.
+- Bài nhiều ảnh: mỗi ảnh gửi cùng một `lich` → lưu **một lần** cho bài.
+- Link thư mục ở chế độ mỗi file 1 bài: thêm `lich_mau: { kieu: "cung_luc" | "moi_ngay", bat_dau: "27/11/2026", gio: "19:00", cach_ngay: 1 }` → rải các file trong thư mục theo thứ tự tên file.
+
+Hệ thống cần: lưu `lich` theo file (khớp theo tên file / tên bài), và **khi AI viết caption xong, tạo bài rồi tự gọi `len_lich` với `lich` đó** (vẫn kiểm từ cấm như bình thường; lỗi thì để bài ở "cần xử lý").
+Trả về `hen_gio: true` trong kết quả `tao_link_tai_len` / `nhap_tu_drive` để web báo "Hệ thống đã nhận lịch". Không có trường này, web báo người dùng lên lịch tay.
+
 ## Chi phí
 
 n8n tự cài trên máy chủ công ty: không giới hạn lượt chạy, không phát sinh phí.
