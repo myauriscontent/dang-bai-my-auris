@@ -82,6 +82,20 @@ Web tĩnh (GitHub Pages) gọi **một** webhook trên n8n.myauris.vn. Webhook c
   (Tuỳ chọn) lưu lại và trả về trong `danh_sach_bai` là `kenh_chon` cho bài đó — để mọi máy đều thấy kênh đã chọn khi lên lịch. Không có thì web chỉ nhớ trên máy đã tải lên.
 - `sua_tuyen` `{ ma, ten }` → đổi tên hiển thị của tuyến (giữ nguyên `ma`, bài, prompt, lịch). Trả `{ "ok": true }`.
 
+## Nhập bài từ link Google Drive (`nhap_tu_drive`)
+
+Web cho dán link file hoặc thư mục Drive thay cho kéo thả. Hệ thống **sao chép** (không di chuyển) file vào thư mục tuyến; file gốc giữ nguyên.
+
+- Bài lẻ: `{ tuyen, che_do: "le", link, id, loai: "file" | "folder", kenh }`
+  - `file` → sao chép file đó vào thư mục tuyến.
+  - `folder` → sao chép từng video/ảnh trong thư mục (không lấy thư mục con) vào thư mục tuyến, mỗi file thành 1 bài.
+- Album: `{ tuyen, che_do: "album", links: [...], ids: [...], loai, album, kenh }`
+  - `loai: "folder"` (1 link thư mục) → tạo thư mục con trong tuyến (tên = `album`, trống thì lấy tên thư mục gốc), sao chép ảnh vào, đặt tên `01_…`, `02_…` theo thứ tự tên file gốc.
+  - `loai: "file"` (nhiều link ảnh) → tạo thư mục con tên `album`, sao chép ảnh theo **đúng thứ tự trong `ids`**, đặt tên `01_…`, `02_…`.
+- Trả về: `{ "ok": true, "so_file": 3, "ten": ["tên file/album đã tạo", …], "thong_bao": "Đã nhận 3 file" }`.
+  Link không đọc được (chưa chia sẻ cho tài khoản hệ thống) → `{ "ok": false, "loi": "Không mở được link, hãy chia sẻ cho My Auris." }`.
+- Cách làm trong n8n: Google Drive node → **Copy** file (`fileId`, `parents: [thư mục tuyến]`, `name`); với thư mục: **Search** `'<id>' in parents and trashed = false` rồi Copy từng file.
+
 ## Chi phí
 
 n8n tự cài trên máy chủ công ty: không giới hạn lượt chạy, không phát sinh phí.

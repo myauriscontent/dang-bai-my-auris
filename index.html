@@ -1045,6 +1045,10 @@ function drawUpload(){
       S.channels.map(ch => '<button type="button" data-act="upch" data-v="'+esc(ch)+'" aria-pressed="'+c.chans.includes(ch)+'" '+(c.running||c.done?"disabled":"")+'>'+esc(chanShort(ch))+'</button>').join("")+
     '</div><small style="color:var(--muted)">'+(c.chans.length ? 'Đã chọn '+c.chans.length+' kênh. Khi lên lịch, các kênh này được chọn sẵn (vẫn đổi được).' : 'Chưa chọn kênh: khi lên lịch bạn sẽ chọn sau.')+'</small></div>'+
   '</div>';
+  h += '<div class="seg" role="group" aria-label="Cách tải lên" style="justify-self:start;background:var(--bg)">'+
+    '<button type="button" data-act="upsrc" data-v="file" aria-pressed="'+(c.src!=="link")+'" '+(c.running?"disabled":"")+'>Từ máy tính</button>'+
+    '<button type="button" data-act="upsrc" data-v="link" aria-pressed="'+(c.src==="link")+'" '+(c.running?"disabled":"")+'>Dán link Google Drive</button></div>';
+  if (c.src === "link"){ drawLinkUpload(h); return; }
   if (!c.done) h += '<label class="drop" id="up-drop" style="position:relative"><input type="file" id="up-file" multiple accept="'+(isAlbum?"image/*":"video/*,image/*")+'"><b>Kéo thả '+(isAlbum?"ảnh":"video / ảnh")+' vào đây</b><span>hoặc bấm để chọn file từ máy</span><small>'+(isAlbum?"2–10 ảnh. Sắp thứ tự bên dưới, ảnh số 1 là ảnh lớn":"Mỗi video hoặc ảnh thành 1 bài riêng")+'</small></label>';
   if (isAlbum && c.files.length && !c.running && !c.done){
     const page = c.tuyen && TUYEN[c.tuyen] ? chanShort((TUYEN[c.tuyen].kenh_video || [])[0] || ("FB: " + tName(c.tuyen))) : "My Auris";
@@ -1129,6 +1133,102 @@ function saveAlbumCache(name, files){
 function moveFile(from, to){
   const c = modalCtx; if (!c || c.running || to < 0 || to >= c.files.length || from === to) return;
   const [x] = c.files.splice(from, 1); c.files.splice(to, 0, x); drawUpload();
+}
+
+/* ---------- Nhập từ link Google Drive ---------- */
+function parseDriveLinks(txt){
+  return String(txt || "").split(/[\s,;]+/).map(s => s.trim()).filter(Boolean).map(u => {
+    let m = /\/folders\/([\w-]{20,})/.exec(u);
+    if (m) return {url:u, id:m[1], kind:"folder"};
+    m = /\/d\/([\w-]{20,})/.exec(u) || /[?&]id=([\w-]{20,})/.exec(u);
+    if (m && /google\.com/i.test(u)) return {url:u, id:m[1], kind:"file"};
+    return {url:u, id:"", kind:"bad"};
+  });
+}
+function linkListHtml(c){
+  const L = parseDriveLinks(c.linkText);
+  if (!L.length) return '';
+  return '<div class="flist">' + L.map((l, i) => {
+    const r = (c.linkRes || [])[i];
+    const label = l.kind === "folder" ? "Thư mục" : l.kind === "file" ? "File" : "Link không hợp lệ";
+    const st = r ? (r.st === "ok" ? '<small style="color:var(--ok)">'+esc(r.msg)+'</small>' : r.st === "run" ? '<small><span class="spin"></span> Đang nhập…</small>' : '<small style="color:var(--bad)">'+esc(r.msg)+'</small>')
+      : (l.kind === "bad" ? '<small style="color:var(--bad)">Không phải link Google Drive</small>' : '<small>Sẵn sàng</small>');
+    return '<div class="fitem '+(r && r.st === "ok" ? "ok" : (r && r.st === "err") || l.kind === "bad" ? "err" : "")+'"><span class="nm"><b style="font-weight:600">'+(i+1)+'. '+label+'</b> <small>· '+esc(l.url.replace(/^https?:\/\//, "").slice(0, 60))+'</small></span>'+st+'</div>';
+  }).join("") + '</div>';
+}
+function linkGoLabel(c){
+  const n = parseDriveLinks(c.linkText).filter(l => l.kind !== "bad").length;
+  return c.running ? '<span class="spin"></span> Đang nhập…' : 'Nhập ' + n + ' link';
+}
+function drawLinkUpload(h){
+  const c = modalCtx;
+  const isAlbum = c.mode === "album";
+  h += '<label class="field">Dán link Google Drive (mỗi link một dòng, file hoặc thư mục đều được)'+
+    '<textarea id="up-links" rows="4" placeholder="https://drive.google.com/drive/folders/…&#10;https://drive.google.com/file/d/…/view" '+(c.running||c.done?"disabled":"")+'>'+esc(c.linkText || "")+'</textarea></label>';
+  h += '<p class="pvnote" style="margin:0">'+(isAlbum
+      ? 'Album: link thư mục thì các ảnh trong thư mục thành 1 bài (xếp theo tên file). Nhiều link file thì ghép thành 1 bài theo đúng thứ tự bạn dán.'
+      : 'Mỗi link file thành 1 bài. Link thư mục thì mỗi video/ảnh bên trong thành 1 bài.')+
+    ' Link cần mở được bằng tài khoản công ty (chia sẻ trong My Auris, hoặc "bất kỳ ai có link"). Hệ thống sao chép file vào thư mục tuyến, file gốc giữ nguyên.</p>';
+  h += '<div id="lk-list">' + linkListHtml(c) + '</div>';
+  if (c.done) h += '<div class="notice" style="margin:0;background:var(--ok-soft)"><b>Đã nhập xong.</b> AI đang xem nội dung và viết caption theo prompt của tuyến '+esc(tName(c.tuyen))+'. Khoảng 2–5 phút nữa bài hiện trong Kho bài.</div>';
+  h += '</div><div class="modal-foot"><span></span><div style="display:flex;gap:8px">'+
+    (c.done ? '<button type="button" class="btn primary" data-act="updone">Xong</button>' :
+    '<button type="button" class="btn" data-act="close" '+(c.running?"disabled":"")+'>Thôi</button><button type="button" class="btn primary" id="lk-go" data-act="lkgo" '+(c.running||!parseDriveLinks(c.linkText).some(l=>l.kind!=="bad")?"disabled":"")+'>'+linkGoLabel(c)+'</button>')+
+    '</div></div>';
+  modal.className = "modal narrow"; modal.style.width = "min(640px,100%)"; modal.innerHTML = h; ov.classList.add("show");
+  const ta = $("#up-links");
+  if (ta) ta.oninput = () => {
+    c.linkText = ta.value; c.linkRes = [];
+    $("#lk-list").innerHTML = linkListHtml(c);
+    const b = $("#lk-go"); if (b){ b.innerHTML = linkGoLabel(c); b.disabled = !parseDriveLinks(c.linkText).some(l => l.kind !== "bad"); }
+  };
+  const al = $("#up-album"); if (al) al.oninput = () => { c.album = al.value; };
+}
+function linkErr(e){
+  const m = errText(e);
+  return /action|không hợp lệ|không hỗ trợ|400/i.test(m) ? "Hệ thống chưa có chức năng nhập từ link Drive (cần anh Duy bật lệnh nhap_tu_drive)." : m;
+}
+function rememberChans(c, p){
+  const names = asArr(p && (p.ten || p.ten_file || p.files));
+  names.forEach(n => { try { localStorage.setItem(uploadChanKey(n), JSON.stringify(c.chans)); } catch(_){ } });
+}
+async function runLinkImport(){
+  const c = modalCtx; if (!c || c.running) return;
+  if (!c.tuyen){ toast("Chọn tuyến trước khi nhập."); return; }
+  const all = parseDriveLinks(c.linkText);
+  const L = all.filter(l => l.kind !== "bad");
+  if (!L.length){ toast("Dán ít nhất 1 link Google Drive."); return; }
+  const kenh = c.chans.map(chanSend).join("; ");
+  c.linkRes = all.map(l => l.kind === "bad" ? {st:"err", msg:"Bỏ qua: không phải link Google Drive"} : null);
+  if (c.mode === "album"){
+    c.album = ($("#up-album") || {}).value || c.album || "";
+    const files = L.filter(l => l.kind === "file"), folders = L.filter(l => l.kind === "folder");
+    if (folders.length > 1 || (folders.length && files.length)){ toast("Album: dán 1 link thư mục, hoặc nhiều link file ảnh."); return; }
+    if (files.length === 1){ toast("Album cần ít nhất 2 ảnh. Dán thêm link, hoặc chọn “Mỗi file là 1 bài”."); return; }
+    if (files.length > 1 && !c.album.trim()){ toast("Đặt tên album."); return; }
+    c.running = true;
+    all.forEach((l, i) => { if (l.kind !== "bad") c.linkRes[i] = {st:"run"}; });
+    drawUpload();
+    try {
+      const p = await call("nhap_tu_drive", {tuyen:c.tuyen, che_do:"album", links:L.map(l => l.url), ids:L.map(l => l.id), loai: folders.length ? "folder" : "file", album:c.album.trim(), kenh});
+      rememberChans(c, p); if (c.album.trim()) rememberChans(c, {ten:c.album.trim()});
+      all.forEach((l, i) => { if (l.kind !== "bad") c.linkRes[i] = {st:"ok", msg: p.thong_bao || ("Đã nhận" + (p.so_file ? " " + p.so_file + " ảnh" : ""))}; });
+    } catch(e){ all.forEach((l, i) => { if (l.kind !== "bad") c.linkRes[i] = {st:"err", msg: linkErr(e)}; }); }
+  } else {
+    c.running = true; drawUpload();
+    for (let i = 0; i < all.length; i++){
+      const l = all[i]; if (l.kind === "bad") continue;
+      c.linkRes[i] = {st:"run"}; drawUpload();
+      try {
+        const p = await call("nhap_tu_drive", {tuyen:c.tuyen, che_do:"le", link:l.url, id:l.id, loai:l.kind, kenh});
+        rememberChans(c, p);
+        c.linkRes[i] = {st:"ok", msg: p.thong_bao || ("Đã nhận" + (p.so_file ? " " + p.so_file + " file" : ""))};
+      } catch(e){ c.linkRes[i] = {st:"err", msg: linkErr(e)}; }
+    }
+  }
+  c.running = false;
+  c.done = c.linkRes.every((r, i) => all[i].kind === "bad" || (r && r.st === "ok")) && c.linkRes.some(r => r && r.st === "ok");
+  drawUpload();
 }
 
 function addFiles(list){
@@ -1319,6 +1419,8 @@ document.addEventListener("click", async ev => {
     case "upl": moveFile(+t.dataset.v, +t.dataset.v - 1); break;
     case "upr": moveFile(+t.dataset.v, +t.dataset.v + 1); break;
     case "upgo": runUpload(); break;
+    case "upsrc": if (!modalCtx.running){ modalCtx.src = t.dataset.v; drawUpload(); } break;
+    case "lkgo": runLinkImport(); break;
     case "newtuyen": openNewTuyen(); break;
     case "kopen": { const pop = $("#kpop"); pop.hidden = !pop.hidden; t.setAttribute("aria-expanded", String(!pop.hidden)); if (!pop.hidden){ const sel = pop.querySelector('[aria-selected="true"]'); if (sel) sel.focus(); } break; }
     case "kpick": S.kenh = t.dataset.v; $("#kpop").hidden = true; $("#kbtn").setAttribute("aria-expanded","false"); render(); $("#kbtn").focus(); break;
