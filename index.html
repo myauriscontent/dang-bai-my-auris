@@ -587,6 +587,13 @@ function showLogin(msg){
   $("#lg-go").onclick = go;
   $("#lg-code").addEventListener("keydown", ev => { if (ev.key === "Enter") go(); });
 }
+/* Bài mới nhất lên đầu: theo thời gian tạo nếu hệ thống gửi, nếu không thì đảo thứ tự (hệ thống trả bài cũ trước) */
+function newestFirst(list){
+  const tOf = b => { const v = b.tao_luc || b.thoi_gian_tao || b.created_at || b.createdTime || b.ngay_tao || ""; const t = Date.parse(v); return isNaN(t) ? null : t; };
+  if (list.length && list.every(b => tOf(b) !== null)) return list.slice().sort((a, b) => tOf(b) - tOf(a));
+  return list.slice().reverse();
+}
+
 /* ---------- Load ---------- */
 async function load(){
   if (S.loading) return;
@@ -627,7 +634,7 @@ async function load(){
   }
   if (res.cx){
     const bai = res.cx.bai || [];
-    S.kho = bai.filter(b => !b.kenh || b.kenh === "—");
+    S.kho = newestFirst(bai.filter(b => !b.kenh || b.kenh === "—"));
     S.issues = bai.filter(b => b.kenh && b.kenh !== "—");
   }
   if (res.vl){
@@ -1102,6 +1109,9 @@ function drawUpload(){
       (f.st === "ok" ? '<small style="color:var(--ok)">Đã tải lên</small>' : f.st === "err" ? '<small style="color:var(--bad)">'+esc(f.msg)+'</small>' : f.st === "run" ? '<small class="pct">'+(f.pct||0)+'%</small>' : (c.running ? '<small>Chờ…</small>' : '<button type="button" class="btn small" data-act="uprm" data-v="'+i+'">Bỏ</button>'))+
       '<div class="pbar"><i style="width:'+(f.st==="ok"?100:(f.pct||0))+'%"></i></div></div>').join("") + '</div>';
   }
+  if (!isAlbum && !c.running && !c.done && c.files.length >= 2 && c.files.every(f => /^image\//.test(f.file.type))){
+    h += '<div class="notice warn" style="margin:0;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><span>Bạn đang tải <b>'+c.files.length+' ảnh thành '+c.files.length+' bài riêng</b>. Muốn đăng chung 1 bài?</span><button type="button" class="btn small primary" data-act="toalbum">Gộp thành 1 bài nhiều ảnh</button></div>';
+  }
   if (c.files.length || c.done) h += schPanel(c);
   if (c.done && c.sch.mode === "lich") h += schAckNote(c);
   if (c.done) h += '<div class="notice" style="margin:0;background:var(--ok-soft);border-color:transparent"><b>Đã tải lên '+c.files.length+' file.</b> AI đang xem nội dung và viết caption theo prompt của tuyến '+esc(tName(c.tuyen))+'. Khoảng 2–5 phút nữa bài hiện trong Kho bài.</div>';
@@ -1563,6 +1573,7 @@ document.addEventListener("click", async ev => {
     case "schp": if (!modalCtx.running){ const s = modalCtx.sch; if (t.dataset.v === "each"){ const its = schItems(modalCtx); its.forEach((it, i) => { if (!s.each[it.key]) s.each[it.key] = schSlot(modalCtx, i, it.key); }); } s.plan = t.dataset.v; drawUpload(); } break;
     case "scht": if (!modalCtx.running){ modalCtx.sch.time = t.dataset.v; drawUpload(); } break;
     case "schg": if (!modalCtx.running){ const s = modalCtx.sch; s.gap = Math.max(1, Math.min(14, s.gap + (+t.dataset.v))); drawUpload(); } break;
+    case "toalbum": if (!modalCtx.running){ const c = modalCtx; c.mode = "album"; if (c.files.length > 10){ c.files = c.files.slice(0, 10); toast("Bài nhiều ảnh tối đa 10 ảnh, đã giữ 10 ảnh đầu."); } drawUpload(); } break;
     case "upsrc": if (!modalCtx.running){ modalCtx.src = t.dataset.v; drawUpload(); } break;
     case "lkgo": runLinkImport(); break;
     case "newtuyen": openNewTuyen(); break;
