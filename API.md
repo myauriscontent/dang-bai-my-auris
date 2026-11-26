@@ -96,6 +96,11 @@ Web cho dán link file hoặc thư mục Drive thay cho kéo thả. Hệ thống
   Link không đọc được (chưa chia sẻ cho tài khoản hệ thống) → `{ "ok": false, "loi": "Không mở được link, hãy chia sẻ cho My Auris." }`.
 - Cách làm trong n8n: Google Drive node → **Copy** file (`fileId`, `parents: [thư mục tuyến]`, `name`); với thư mục: **Search** `'<id>' in parents and trashed = false` rồi Copy từng file.
 
+## Bài nhiều ảnh: đăng 1 bài, không tạo album
+
+Trên web, "album" giờ gọi là **bài nhiều ảnh**: 2–10 ảnh đăng chung **một bài viết** trên trang (kiểu ảnh lớn + ảnh nhỏ), **không tạo Album ảnh** trên Facebook. Trong API vẫn giữ tên trường `album` / `che_do: "album"` / `loai: "album"` để không phải đổi gì.
+Nhờ kiểm tra: khi gửi sang Upload-Post, thư mục nhiều ảnh được đăng thành **1 bài viết nhiều ảnh** trên Facebook (và carousel trên Instagram), không phải tạo album mới trên page.
+
 ## Chi phí
 
 n8n tự cài trên máy chủ công ty: không giới hạn lượt chạy, không phát sinh phí.

@@ -445,7 +445,7 @@ const platformOf = c => /^tiktok/i.test(c) ? "TIKTOK" : /^instagram/i.test(c) ? 
 const chanName = c => String(c || "").replace(/^(FB|Facebook|TikTok|Instagram|YouTube)\s*:\s*/i, "");
 const chanShort = c => c.replace(/^FB:\s*/,"").replace(/^Instagram:\s*/,"IG ").replace(/^TikTok:\s*/,"TikTok ");
 const isPhoto = it => (it.loai||"") !== "video";
-const loaiLabel = l => l==="video" ? "Video" : l==="album" ? "Album ảnh" : "Ảnh";
+const loaiLabel = l => l==="video" ? "Video" : l==="album" ? "Nhiều ảnh" : "Ảnh";
 
 /* ---------- Tuyến ---------- */
 function tuyenFromText(s){
@@ -931,7 +931,7 @@ function drawSchedule(){
       const fb = r.chans.find(ch => /^FB:/.test(ch)) || r.chans[0] || "";
       h += '<tr class="pvrow"><td colspan="4">' + (imgs.length
         ? '<details'+(c.rows.length===1?' open':'')+'><summary style="cursor:pointer;font-size:13px;color:var(--accent)">Xem trước bố cục khi đăng ('+imgs.length+' ảnh)</summary><div style="margin-top:8px">'+fbPreview(imgs, {page: chanShort(fb) || "My Auris", caption: cleanTitle(r.it.tieu_de), when: toDMY(r.date)+" lúc "+r.time})+'</div></details>'
-        : '<p class="pvnote">Chưa có ảnh để xem trước bố cục (chỉ có khi album được tải lên từ máy này qua web, hoặc khi hệ thống gửi danh sách ảnh).</p>') + '</td></tr>';
+        : '<p class="pvnote">Chưa có ảnh để xem trước bố cục (chỉ có khi bài được tải lên từ máy này qua web, hoặc khi hệ thống gửi danh sách ảnh).</p>') + '</td></tr>';
     }
   });
   h += '</tbody></table></div></div>';
@@ -1039,8 +1039,8 @@ function drawUpload(){
   let h = '<div class="modal-head"><h2>Tải bài lên</h2><button type="button" class="x" data-act="close" aria-label="Đóng">×</button></div><div class="modal-body">';
   h += '<div class="plan">'+
     '<div class="field">Tuyến<div class="seg" role="group">'+TUYEN_ORDER.map(k => '<button type="button" data-act="upt" data-v="'+k+'" aria-pressed="'+(c.tuyen===k)+'">'+esc(tName(k))+'</button>').join("")+'</div></div>'+
-    '<div class="field">Loại bài<div class="seg" role="group"><button type="button" data-act="upm" data-v="le" aria-pressed="'+!isAlbum+'">Mỗi file là 1 bài</button><button type="button" data-act="upm" data-v="album" aria-pressed="'+isAlbum+'">Nhiều ảnh = 1 album</button></div></div>'+
-    (isAlbum ? '<label class="field">Tên album<input type="text" id="up-album" value="'+esc(c.album)+'" placeholder="Vd: Răng sứ tháng 11" '+(c.running?"disabled":"")+'></label>' : '')+
+    '<div class="field">Loại bài<div class="seg" role="group"><button type="button" data-act="upm" data-v="le" aria-pressed="'+!isAlbum+'">Mỗi file là 1 bài</button><button type="button" data-act="upm" data-v="album" aria-pressed="'+isAlbum+'">Nhiều ảnh = 1 bài</button></div></div>'+
+    (isAlbum ? '<label class="field">Tên bài (để nhận ra trong kho)<input type="text" id="up-album" value="'+esc(c.album)+'" placeholder="Vd: Răng sứ tháng 11" '+(c.running?"disabled":"")+'></label>' : '')+
     '<div class="field" style="flex-basis:100%">Đăng lên kênh (chọn được nhiều kênh)<div class="chtog" role="group" aria-label="Kênh đăng">'+
       S.channels.map(ch => '<button type="button" data-act="upch" data-v="'+esc(ch)+'" aria-pressed="'+c.chans.includes(ch)+'" '+(c.running||c.done?"disabled":"")+'>'+esc(chanShort(ch))+'</button>').join("")+
     '</div><small style="color:var(--muted)">'+(c.chans.length ? 'Đã chọn '+c.chans.length+' kênh. Khi lên lịch, các kênh này được chọn sẵn (vẫn đổi được).' : 'Chưa chọn kênh: khi lên lịch bạn sẽ chọn sau.')+'</small></div>'+
@@ -1166,7 +1166,7 @@ function drawLinkUpload(h){
   h += '<label class="field">Dán link Google Drive (mỗi link một dòng, file hoặc thư mục đều được)'+
     '<textarea id="up-links" rows="4" placeholder="https://drive.google.com/drive/folders/…&#10;https://drive.google.com/file/d/…/view" '+(c.running||c.done?"disabled":"")+'>'+esc(c.linkText || "")+'</textarea></label>';
   h += '<p class="pvnote" style="margin:0">'+(isAlbum
-      ? 'Album: link thư mục thì các ảnh trong thư mục thành 1 bài (xếp theo tên file). Nhiều link file thì ghép thành 1 bài theo đúng thứ tự bạn dán.'
+      ? 'Bài nhiều ảnh: link thư mục thì các ảnh trong thư mục đăng chung 1 bài (xếp theo tên file). Nhiều link file ảnh thì đăng chung 1 bài theo đúng thứ tự bạn dán.'
       : 'Mỗi link file thành 1 bài. Link thư mục thì mỗi video/ảnh bên trong thành 1 bài.')+
     ' Link cần mở được bằng tài khoản công ty (chia sẻ trong My Auris, hoặc "bất kỳ ai có link"). Hệ thống sao chép file vào thư mục tuyến, file gốc giữ nguyên.</p>';
   h += '<div id="lk-list">' + linkListHtml(c) + '</div>';
@@ -1203,9 +1203,9 @@ async function runLinkImport(){
   if (c.mode === "album"){
     c.album = ($("#up-album") || {}).value || c.album || "";
     const files = L.filter(l => l.kind === "file"), folders = L.filter(l => l.kind === "folder");
-    if (folders.length > 1 || (folders.length && files.length)){ toast("Album: dán 1 link thư mục, hoặc nhiều link file ảnh."); return; }
-    if (files.length === 1){ toast("Album cần ít nhất 2 ảnh. Dán thêm link, hoặc chọn “Mỗi file là 1 bài”."); return; }
-    if (files.length > 1 && !c.album.trim()){ toast("Đặt tên album."); return; }
+    if (folders.length > 1 || (folders.length && files.length)){ toast("Bài nhiều ảnh: dán 1 link thư mục, hoặc nhiều link file ảnh."); return; }
+    if (files.length === 1){ toast("Bài nhiều ảnh cần ít nhất 2 ảnh. Dán thêm link, hoặc chọn “Mỗi file là 1 bài”."); return; }
+    if (files.length > 1 && !c.album.trim()){ toast("Đặt tên cho bài nhiều ảnh."); return; }
     c.running = true;
     all.forEach((l, i) => { if (l.kind !== "bad") c.linkRes[i] = {st:"run"}; });
     drawUpload();
@@ -1265,8 +1265,8 @@ async function runUpload(){
   if (!pending.length) return;
   if (c.mode === "album"){
     c.album = ($("#up-album") || {}).value || c.album;
-    if (!c.album.trim()){ toast("Đặt tên album."); return; }
-    if (c.files.length < 2 || c.files.length > 10){ toast("Album cần từ 2 đến 10 ảnh."); return; }
+    if (!c.album.trim()){ toast("Đặt tên cho bài nhiều ảnh."); return; }
+    if (c.files.length < 2 || c.files.length > 10){ toast("Bài nhiều ảnh cần từ 2 đến 10 ảnh."); return; }
     c.files.forEach((f, i) => { f.sendName = String(i + 1).padStart(2, "0") + "_" + f.file.name.replace(/^\d{1,3}[_\-. ]+/, ""); });
   }
   c.running = true; drawUpload();
